@@ -1,6 +1,10 @@
-torch>=1.8.1
 numpy
 pandas
 tqdm
 tabulate
 networkx
+scikit-learn
+matplotlib
+
+torch==2.2.2+cu121
+--extra-index-url https://download.pytorch.org/whl/cu121
