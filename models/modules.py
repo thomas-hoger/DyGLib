@@ -109,6 +109,8 @@ class MultiHeadAttention(nn.Module):
         :param dropout: float, dropout rate
         """
         super(MultiHeadAttention, self).__init__()
+        
+        print(node_feat_dim, time_feat_dim, num_heads)
 
         self.node_feat_dim = node_feat_dim
         self.edge_feat_dim = edge_feat_dim

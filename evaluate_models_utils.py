@@ -1,3 +1,5 @@
+import pandas as pd
+
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -15,6 +17,204 @@ from utils.utils import set_random_seed
 from utils.utils import NegativeEdgeSampler, NeighborSampler
 from utils.DataLoader import Data
 
+import networkx as nx
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import networkx as nx
+
+cmap = plt.cm.RdYlGn_r
+feature_vocab = {'http2.path': 0, 'pfcp.seid': 1, 'pfcp.f_teid.teid': 2, 'gtp.ext_hdr.pdu_ses_con.pdu_type': 3, 'http2.ausfInstanceId': 4, 'http2.ueId': 5, 'http2.imsi': 6, 'http2.amfInstanceId': 7, 'http2.cause': 8, 'http2.service-names': 9, 'http2.target-nf-type': 10, 'pfcp.apply_action.forw': 11, 'ip_src': 12, 'pfcp.msg_type': 13, 'pfcp.outer_hdr_creation.teid': 14, 'http2.nfInstanceId': 15, 'http2.target-nf-instance-id': 16, 'http2.supis': 17, 'gtp.teid': 18, 'pfcp.f_teid.ipv4_addr': 19, 'http2.ipv4Address': 20, 'pfcp.ue_ip_addr_ipv4': 21, 'http2.nfType': 22, 'http2.request.supi': 23, 'pfcp.pdr_id': 24, 'pfcp.apply_action.drop': 25, 'http2.supi': 26, 'http2.subscriberIdentifier': 27, 'ip.ip_dst': 28, 'pfcp.far_id': 29, 'ip.ip_src': 30, 'http2.jwt.scope': 31, 'ip_dst': 32, 'http2.nf-type': 33, 'pfcp.cause': 34, 'pfcp.outer_hdr_creation.ipv4': 35, 'http2.requester-nf-type': 36, 'pfcp.f_seid.ipv4': 37, 'http2.jwt.sub': 38, 'http2.method': 39, 'http2.servingNfId': 40}
+attack_type_vocab = {'user_traffic': 0, 'modify_drop': 1, 'flood_etablishment': 2, 'applicative_scan': 3, 'seid_fuzzing': 4, 'pfcp_in_gtp': 5, 'uplink_wake_random_u': 6, 'set_random_ue_idle': 7, 'cn_mitm': 8, 'add_random_nf': 9, 'remove_random_nf': 10, 'flood_deletion': 11, 'uplink_spoofing': 12, 'fuzz': 13, 'downlink_wake_random': 14, 'modify_dupl': 15, 'deregister_random_ue': 16, 'register_random_ue': 17, 'restart': 18, 'unknown': 19}
+
+loss_min = 0
+loss_max = 1 
+
+def plot_graph_with_loss(nx_graph, node_colors, node_labels, save_dir):
+    pos = nx.spring_layout(nx_graph, seed=42)
+
+    edge_colors = [nx_graph[u][v]['color'] for u, v in nx_graph.edges()]
+    node_color_list = [node_colors.get(n, "blue") for n in nx_graph.nodes()]
+
+    plt.figure(figsize=(16, 14))
+
+    nx.draw(
+        nx_graph,
+        pos,
+        with_labels=False,
+        edge_color=edge_colors,
+        node_color=node_color_list,
+        node_size=50,
+        width=3,
+    )
+
+    # 🔥 labels uniquement pour sources
+    nx.draw_networkx_labels(
+        nx_graph,
+        pos,
+        labels=node_labels,
+        font_size=6,
+        font_color="gray"
+    )
+
+    # 🔥 garder seulement les edges avec forte loss
+    edge_labels = {
+        (u, v): data["label"]
+        for u, v, data in nx_graph.edges(data=True)
+        if data.get("loss", 0) > 0.2
+    }
+
+    nx.draw_networkx_edge_labels(
+        nx_graph,
+        pos,
+        edge_labels=edge_labels,
+        font_size=6
+    )
+
+    plt.title("Graph with Loss Gradient (Green → Red)")
+    plt.axis("off")
+    plt.savefig(save_dir)
+    print(f"Saved graph to {save_dir}")
+
+
+def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sampler: NeighborSampler, evaluate_idx_data_loader: DataLoader,
+                                   evaluate_data: Data, loss_func: nn.Module, num_neighbors: int = 20, time_gap: int = 2000, df_labels: pd.DataFrame = None):
+    """
+    evaluate models on the link prediction task
+    :param model_name: str, name of the model
+    :param model: nn.Module, the model to be evaluated
+    :param neighbor_sampler: NeighborSampler, neighbor sampler
+    :param evaluate_idx_data_loader: DataLoader, evaluate index data loader
+    :param evaluate_neg_edge_sampler: NegativeEdgeSampler, evaluate negative edge sampler
+    :param evaluate_data: Data, data to be evaluated
+    :param loss_func: nn.Module, loss function
+    :param num_neighbors: int, number of neighbors to sample for each node
+    :param time_gap: int, time gap for neighbors to compute node features
+    :return:
+    """
+
+    if model_name in ['DyRep', 'TGAT', 'TGN', 'CAWN', 'TCL', 'GraphMixer', 'DyGFormer']:
+        # evaluation phase use all the graph information
+        model[0].set_neighbor_sampler(neighbor_sampler)
+
+    model.eval()
+    
+    attack_counters = {}
+
+    with torch.no_grad():
+        # store evaluate losses and metrics
+        evaluate_losses, evaluate_metrics = [], []
+        evaluate_idx_data_loader_tqdm = tqdm(evaluate_idx_data_loader, ncols=120)
+        for batch_idx, evaluate_data_indices in enumerate(evaluate_idx_data_loader_tqdm):
+            evaluate_data_indices = evaluate_data_indices.numpy()
+            batch_src_node_ids, batch_dst_node_ids, batch_node_interact_times, batch_edge_ids, batch_label, batch_attack, batch_packet_id = \
+                evaluate_data.src_node_ids[evaluate_data_indices],  evaluate_data.dst_node_ids[evaluate_data_indices], \
+                evaluate_data.node_interact_times[evaluate_data_indices], evaluate_data.edge_ids[evaluate_data_indices], \
+                evaluate_data.labels[evaluate_data_indices], evaluate_data.attack_type[evaluate_data_indices], evaluate_data.packet_id[evaluate_data_indices]
+
+            # we need to compute for positive and negative edges respectively, because the new sampling strategy (for evaluation) allows the negative source nodes to be
+            # different from the source nodes, this is different from previous works that just replace destination nodes with negative destination nodes
+            if model_name in ['TGAT', 'CAWN', 'TCL']:
+                # get temporal embedding of source and destination nodes
+                # two Tensors, with shape (batch_size, node_feat_dim)
+                batch_src_node_embeddings, batch_dst_node_embeddings = \
+                    model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_src_node_ids,
+                                                                      dst_node_ids=batch_dst_node_ids,
+                                                                      node_interact_times=batch_node_interact_times,
+                                                                      num_neighbors=num_neighbors)
+
+            elif model_name in ['JODIE', 'DyRep', 'TGN']:
+                # get temporal embedding of source and destination nodes
+                # two Tensors, with shape (batch_size, node_feat_dim)
+                batch_src_node_embeddings, batch_dst_node_embeddings = \
+                    model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_src_node_ids,
+                                                                      dst_node_ids=batch_dst_node_ids,
+                                                                      node_interact_times=batch_node_interact_times,
+                                                                      edge_ids=batch_edge_ids,
+                                                                      edges_are_positive=True,
+                                                                      num_neighbors=num_neighbors)
+            elif model_name in ['GraphMixer']:
+                # get temporal embedding of source and destination nodes
+                # two Tensors, with shape (batch_size, node_feat_dim)
+                batch_src_node_embeddings, batch_dst_node_embeddings = \
+                    model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_src_node_ids,
+                                                                      dst_node_ids=batch_dst_node_ids,
+                                                                      node_interact_times=batch_node_interact_times,
+                                                                      num_neighbors=num_neighbors,
+                                                                      time_gap=time_gap)
+
+            elif model_name in ['DyGFormer']:
+                # get temporal embedding of source and destination nodes
+                # two Tensors, with shape (batch_size, node_feat_dim)
+                batch_src_node_embeddings, batch_dst_node_embeddings = \
+                    model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_src_node_ids,
+                                                                      dst_node_ids=batch_dst_node_ids,
+                                                                      node_interact_times=batch_node_interact_times)
+
+            else:
+                raise ValueError(f"Wrong value for model_name {model_name}!")
+            
+            selected_attack = None
+            for att_type in np.unique(batch_attack):
+                
+                if att_type not in attack_counters:
+                    attack_counters[att_type] = 0
+                
+                if attack_counters[att_type] < 3:
+                    attack_counters[att_type] += 1
+                    selected_attack = att_type
+                    break 
+               
+            if not selected_attack:
+                continue 
+
+            nx_graph = nx.Graph()
+            node_colors = {}
+            node_labels = {}
+            
+            mask = batch_attack == selected_attack
+            selected_attack_label = list(attack_type_vocab.keys())[selected_attack]
+            
+            event_embedding = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()[mask]
+            original_msg = model[0].edge_raw_features[batch_edge_ids][mask]
+            
+            for i in range(len(event_embedding)):
+                src = batch_src_node_ids[mask][i].item()
+                dst = batch_dst_node_ids[mask][i].item()
+
+                edge_text = list(feature_vocab.keys())[original_msg[i].argmax().item()]
+
+                loss = loss_func(event_embedding[i], original_msg[i]).item()
+                norm_loss = (loss - loss_min) / (loss_max - loss_min)
+                loss = max(0, min(1, norm_loss))
+                
+                color = cmap(loss)
+
+                if batch_label[mask][i].item() == 1:
+                    node_colors[src] = "red"
+                else:
+                    node_colors[src] = "blue"
+                node_colors[dst] = "black"
+
+                node_labels[src] = selected_attack_label
+
+                nx_graph.add_edge(batch_src_node_ids[mask][i].item(), batch_dst_node_ids[mask][i].item(), label=edge_text, color=color, loss=loss)
+
+                evaluate_losses.append(loss)
+                
+            save_dir = f'./figures/{model_name}/{selected_attack_label}_{attack_counters[selected_attack]}.png'
+            os.makedirs(f'./figures/{model_name}', exist_ok=True)
+
+            plot_graph_with_loss(nx_graph, node_colors, node_labels, save_dir)
+                
+            evaluate_idx_data_loader_tqdm.set_description(f'evaluate for the {batch_idx + 1}-th batch, evaluate loss: {loss}, {len(attack_counters)}/{len(attack_type_vocab)} attack types')
+            
+            if len(attack_counters) == len(attack_type_vocab):
+                if all(count >= 3 for count in attack_counters.values()):
+                    break
+
+    print(min(evaluate_losses), max(evaluate_losses), np.mean(evaluate_losses))
+
+    return evaluate_losses, evaluate_metrics
 
 def evaluate_model_link_prediction(model_name: str, model: nn.Module, neighbor_sampler: NeighborSampler, evaluate_idx_data_loader: DataLoader,
                                    evaluate_neg_edge_sampler: NegativeEdgeSampler, evaluate_data: Data, loss_func: nn.Module,
