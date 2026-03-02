@@ -53,6 +53,7 @@ def get_link_prediction_args(is_evaluation: bool = False):
     try:
         args = parser.parse_args()
         args.device = f'cuda:{args.gpu}' if torch.cuda.is_available() and args.gpu >= 0 else 'cpu'
+        print(f"Using device: {args.device}")
     except:
         parser.print_help()
         sys.exit()
