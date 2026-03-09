@@ -46,7 +46,7 @@ class TGAT(nn.Module):
                                                       hidden_dim=self.node_feat_dim, output_dim=self.node_feat_dim) for _ in range(num_layers)])
 
     def compute_src_dst_node_temporal_embeddings(self, src_node_ids: np.ndarray, dst_node_ids: np.ndarray,
-                                                 node_interact_times: np.ndarray, num_neighbors: int = 20):
+                                                 node_interact_times: np.ndarray, node_pids: np.ndarray, num_neighbors: int = 20):
         """
         compute source and destination node temporal embeddings
         :param src_node_ids: ndarray, shape (batch_size, )
@@ -56,10 +56,10 @@ class TGAT(nn.Module):
         :return:
         """
         # Tensor, shape (batch_size, node_feat_dim)
-        src_node_embeddings = self.compute_node_temporal_embeddings(node_ids=src_node_ids, node_interact_times=node_interact_times,
+        src_node_embeddings = self.compute_node_temporal_embeddings(node_ids=src_node_ids, node_interact_times=node_interact_times, node_pids=node_pids,
                                                                     current_layer_num=self.num_layers, num_neighbors=num_neighbors)
         # Tensor, shape (batch_size, node_feat_dim)
-        dst_node_embeddings = self.compute_node_temporal_embeddings(node_ids=dst_node_ids, node_interact_times=node_interact_times,
+        dst_node_embeddings = self.compute_node_temporal_embeddings(node_ids=dst_node_ids, node_interact_times=node_interact_times, node_pids=node_pids,
                                                                     current_layer_num=self.num_layers, num_neighbors=num_neighbors)
         return src_node_embeddings, dst_node_embeddings
 
