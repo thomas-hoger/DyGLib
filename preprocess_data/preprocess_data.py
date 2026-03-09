@@ -56,17 +56,15 @@ def preprocess(dataset_name: str):
             
             packet_id_list.append(e[6])
             
-    df1 = pd.DataFrame({ 'u': u_list,
+    df = pd.DataFrame({ 'u': u_list,
                          'i': i_list,
                          'ts': ts_list,
                          'label': label_list,
-                         'idx': idx_list})
-
-    df2 = pd.DataFrame({ 'idx': idx_list,
+                         'idx': idx_list,
                          'packet_id': packet_id_list,
                          'attack_type': attack_type_list})
             
-    return df1, np.array(feat_l), df2
+    return df, np.array(feat_l)
 
 
 def reindex(df: pd.DataFrame, bipartite: bool = True):
@@ -110,9 +108,8 @@ def preprocess_data(dataset_name: str, bipartite: bool = True, node_feat_dim: in
     OUT_DF = '../processed_data/{}/ml_{}.csv'.format(dataset_name, dataset_name)
     OUT_FEAT = '../processed_data/{}/ml_{}.npy'.format(dataset_name, dataset_name)
     OUT_NODE_FEAT = '../processed_data/{}/ml_{}_node.npy'.format(dataset_name, dataset_name)
-    OUT_ADD_LABEL = '../processed_data/{}/ml_{}_additional_labels.csv'.format(dataset_name, dataset_name)
 
-    df, edge_feats, additional_labels = preprocess(PATH)
+    df, edge_feats = preprocess(PATH)
     # new_df = reindex(df, bipartite) 
     new_df = df.copy()  # we have 2 df now and discriminating the source and target node by unique ids dont seem necessary
 
@@ -133,7 +130,6 @@ def preprocess_data(dataset_name: str, bipartite: bool = True, node_feat_dim: in
     new_df.to_csv(OUT_DF)  # edge-list
     np.save(OUT_FEAT, edge_feats)  # edge features
     np.save(OUT_NODE_FEAT, node_feats)  # node features
-    additional_labels.to_csv(OUT_ADD_LABEL)
 
 def check_data(dataset_name: str):
     """
@@ -145,33 +141,27 @@ def check_data(dataset_name: str):
     origin_OUT_DF = '../DG_data/{}/ml_{}.csv'.format(dataset_name, dataset_name)
     origin_OUT_FEAT = '../DG_data/{}/ml_{}.npy'.format(dataset_name, dataset_name)
     origin_OUT_NODE_FEAT = '../DG_data/{}/ml_{}_node.npy'.format(dataset_name, dataset_name)
-    origin_OUT_ADD_LABEL = '../DG_data/{}/ml_{}_additional_labels.csv'.format
 
     # processed data paths
     OUT_DF = '../processed_data/{}/ml_{}.csv'.format(dataset_name, dataset_name)
     OUT_FEAT = '../processed_data/{}/ml_{}.npy'.format(dataset_name, dataset_name)
     OUT_NODE_FEAT = '../processed_data/{}/ml_{}_node.npy'.format(dataset_name, dataset_name)
-    OUT_ADD_LABEL = '../processed_data/{}/ml_{}_additional_labels.csv'.format(dataset_name, dataset_name)
 
     # Load original data
     origin_g_df = pd.read_csv(origin_OUT_DF)
     origin_e_feat = np.load(origin_OUT_FEAT)
     origin_n_feat = np.load(origin_OUT_NODE_FEAT)
-    origin_add_label = pd.read_csv(origin_OUT_ADD_LABEL)
 
     # Load processed data
     g_df = pd.read_csv(OUT_DF)
     e_feat = np.load(OUT_FEAT)
     n_feat = np.load(OUT_NODE_FEAT)
-    add_label = pd.read_csv(OUT_ADD_LABEL)
     
     assert_frame_equal(origin_g_df, g_df)
     # check numbers of edges and edge features
     assert origin_e_feat.shape == e_feat.shape and origin_e_feat.max() == e_feat.max() and origin_e_feat.min() == e_feat.min()
     # check numbers of nodes and node features
     assert origin_n_feat.shape == n_feat.shape and origin_n_feat.max() == n_feat.max() and origin_n_feat.min() == n_feat.min()
-    # check additional labels
-    assert origin_add_label.shape == add_label.shape and origin_add_label.max() == add_label.max() and origin_add_label.min() == add_label.min()
 
 parser = argparse.ArgumentParser('Interface for preprocessing datasets')
 parser.add_argument('--dataset_name', type=str,

@@ -63,7 +63,7 @@ class TGAT(nn.Module):
                                                                     current_layer_num=self.num_layers, num_neighbors=num_neighbors)
         return src_node_embeddings, dst_node_embeddings
 
-    def compute_node_temporal_embeddings(self, node_ids: np.ndarray, node_interact_times: np.ndarray,
+    def compute_node_temporal_embeddings(self, node_ids: np.ndarray, node_interact_times: np.ndarray, node_pids: np.ndarray,
                                          current_layer_num: int, num_neighbors: int = 20):
         """
         given node ids node_ids, and the corresponding time node_interact_times,
@@ -90,6 +90,7 @@ class TGAT(nn.Module):
             # Tensor, shape (batch_size, node_feat_dim)
             node_conv_features = self.compute_node_temporal_embeddings(node_ids=node_ids,
                                                                        node_interact_times=node_interact_times,
+                                                                       node_pids=node_pids,
                                                                        current_layer_num=current_layer_num - 1,
                                                                        num_neighbors=num_neighbors)
 
@@ -97,15 +98,17 @@ class TGAT(nn.Module):
             # neighbor_node_ids, ndarray, shape (batch_size, num_neighbors)
             # neighbor_edge_ids, ndarray, shape (batch_size, num_neighbors)
             # neighbor_times, ndarray, shape (batch_size, num_neighbors)
-            neighbor_node_ids, neighbor_edge_ids, neighbor_times = \
+            neighbor_node_ids, neighbor_edge_ids, neighbor_times, neighbor_pids = \
                 self.neighbor_sampler.get_historical_neighbors(node_ids=node_ids,
                                                                node_interact_times=node_interact_times,
+                                                               node_pids=node_pids,
                                                                num_neighbors=num_neighbors)
 
             # get neighbor features from previous layers
             # shape (batch_size * num_neighbors, node_feat_dim)
             neighbor_node_conv_features = self.compute_node_temporal_embeddings(node_ids=neighbor_node_ids.flatten(),
                                                                                 node_interact_times=neighbor_times.flatten(),
+                                                                                node_pids=neighbor_pids,
                                                                                 current_layer_num=current_layer_num - 1,
                                                                                 num_neighbors=num_neighbors)
             # shape (batch_size, num_neighbors, node_feat_dim)

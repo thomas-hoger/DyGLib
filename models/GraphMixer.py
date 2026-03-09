@@ -54,8 +54,8 @@ class GraphMixer(nn.Module):
 
         self.output_layer = nn.Linear(in_features=self.num_channels + self.node_feat_dim, out_features=self.node_feat_dim, bias=True)
 
-    def compute_src_dst_node_temporal_embeddings(self, src_node_ids: np.ndarray, dst_node_ids: np.ndarray,
-                                                 node_interact_times: np.ndarray, num_neighbors: int = 20, time_gap: int = 2000):
+    def compute_src_dst_node_temporal_embeddings(self, src_node_ids: np.ndarray, dst_node_ids: np.ndarray, node_interact_times: np.ndarray, 
+                                                 node_pids: np.ndarray, num_neighbors: int = 20, time_gap: int = 2000):
         """
         compute source and destination node temporal embeddings
         :param src_node_ids: ndarray, shape (batch_size, )
@@ -65,16 +65,18 @@ class GraphMixer(nn.Module):
         :param time_gap: int, time gap for neighbors to compute node features
         :return:
         """
+                
         # Tensor, shape (batch_size, node_feat_dim)
-        src_node_embeddings = self.compute_node_temporal_embeddings(node_ids=src_node_ids, node_interact_times=node_interact_times,
+        src_node_embeddings = self.compute_node_temporal_embeddings(node_ids=src_node_ids, node_interact_times=node_interact_times, node_pids=node_pids, 
                                                                     num_neighbors=num_neighbors, time_gap=time_gap)
+                
         # Tensor, shape (batch_size, node_feat_dim)
-        dst_node_embeddings = self.compute_node_temporal_embeddings(node_ids=dst_node_ids, node_interact_times=node_interact_times,
+        dst_node_embeddings = self.compute_node_temporal_embeddings(node_ids=dst_node_ids, node_interact_times=node_interact_times, node_pids=node_pids, 
                                                                     num_neighbors=num_neighbors, time_gap=time_gap)
 
         return src_node_embeddings, dst_node_embeddings
 
-    def compute_node_temporal_embeddings(self, node_ids: np.ndarray, node_interact_times: np.ndarray,
+    def compute_node_temporal_embeddings(self, node_ids: np.ndarray, node_interact_times: np.ndarray, node_pids: np.ndarray,
                                          num_neighbors: int = 20, time_gap: int = 2000):
         """
         given node ids node_ids, and the corresponding time node_interact_times, return the temporal embeddings of nodes in node_ids
@@ -89,9 +91,10 @@ class GraphMixer(nn.Module):
         # neighbor_node_ids, ndarray, shape (batch_size, num_neighbors)
         # neighbor_edge_ids, ndarray, shape (batch_size, num_neighbors)
         # neighbor_times, ndarray, shape (batch_size, num_neighbors)
-        neighbor_node_ids, neighbor_edge_ids, neighbor_times = \
+        neighbor_node_ids, neighbor_edge_ids, neighbor_times, _ = \
             self.neighbor_sampler.get_historical_neighbors(node_ids=node_ids,
                                                            node_interact_times=node_interact_times,
+                                                           max_pid=node_pids,
                                                            num_neighbors=num_neighbors)
 
         # Tensor, shape (batch_size, num_neighbors, edge_feat_dim)
@@ -117,8 +120,9 @@ class GraphMixer(nn.Module):
         # node encoder
         # get temporal neighbors of nodes, including neighbor ids
         # time_gap_neighbor_node_ids, ndarray, shape (batch_size, time_gap)
-        time_gap_neighbor_node_ids, _, _ = self.neighbor_sampler.get_historical_neighbors(node_ids=node_ids,
+        time_gap_neighbor_node_ids, _, _, _ = self.neighbor_sampler.get_historical_neighbors(node_ids=node_ids,
                                                                                           node_interact_times=node_interact_times,
+                                                                                          max_pid=node_pids,
                                                                                           num_neighbors=time_gap)
 
         # Tensor, shape (batch_size, time_gap, node_feat_dim)

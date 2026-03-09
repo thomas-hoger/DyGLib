@@ -53,7 +53,7 @@ class TCL(nn.Module):
 
         self.output_layer = nn.Linear(in_features=self.node_feat_dim, out_features=self.node_feat_dim, bias=True)
 
-    def compute_src_dst_node_temporal_embeddings(self, src_node_ids: np.ndarray, dst_node_ids: np.ndarray,
+    def compute_src_dst_node_temporal_embeddings(self, src_node_ids: np.ndarray, dst_node_ids: np.ndarray, node_pids: np.ndarray,
                                                  node_interact_times: np.ndarray, num_neighbors: int = 20):
         """
         compute source and destination node temporal embeddings
@@ -66,19 +66,21 @@ class TCL(nn.Module):
         # get temporal neighbors of source nodes, including neighbor ids, edge ids and time information
         # src_neighbor_node_ids, ndarray, shape (batch_size, num_neighbors)
         # src_neighbor_edge_ids, ndarray, shape (batch_size, num_neighbors)
-        # src_neighbor_times, ndarray, shape (batch_size, num_neighbors)
-        src_neighbor_node_ids, src_neighbor_edge_ids, src_neighbor_times = \
+        # src_neighbor_times, ndarray, shape (batch_size, num_neighbors)        
+        src_neighbor_node_ids, src_neighbor_edge_ids, src_neighbor_times, _ = \
             self.neighbor_sampler.get_historical_neighbors(node_ids=src_node_ids,
                                                            node_interact_times=node_interact_times,
+                                                           node_pids=node_pids,
                                                            num_neighbors=num_neighbors)
 
         # get temporal neighbors of destination nodes, including neighbor ids, edge ids and time information
         # dst_neighbor_node_ids, ndarray, shape (batch_size, num_neighbors)
         # dst_neighbor_edge_ids, ndarray, shape (batch_size, num_neighbors)
         # dst_neighbor_times, ndarray, shape (batch_size, num_neighbors)
-        dst_neighbor_node_ids, dst_neighbor_edge_ids, dst_neighbor_times = \
+        dst_neighbor_node_ids, dst_neighbor_edge_ids, dst_neighbor_times, _ = \
             self.neighbor_sampler.get_historical_neighbors(node_ids=dst_node_ids,
                                                            node_interact_times=node_interact_times,
+                                                           node_pids=node_pids,
                                                            num_neighbors=num_neighbors)
 
         # src_neighbor_node_ids, ndarray, shape (batch_size, num_neighbors + 1)
@@ -94,7 +96,7 @@ class TCL(nn.Module):
         dst_neighbor_edge_ids = np.concatenate((np.zeros((len(dst_node_ids), 1)).astype(np.longlong), dst_neighbor_edge_ids), axis=1)
         # dst_neighbor_times, ndarray, shape (batch_size, num_neighbors + 1)
         dst_neighbor_times = np.concatenate((node_interact_times[:, np.newaxis], dst_neighbor_times), axis=1)
-
+        
         # pad the features of the sequence of source and destination nodes
         # src_nodes_neighbor_node_raw_features, Tensor, shape (batch_size, num_neighbors + 1, node_feat_dim)
         # src_nodes_edge_raw_features, Tensor, shape (batch_size, num_neighbors + 1, edge_feat_dim)

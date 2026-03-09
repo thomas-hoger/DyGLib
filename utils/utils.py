@@ -86,6 +86,8 @@ class NeighborSampler:
         self.nodes_neighbor_ids = []
         self.nodes_edge_ids = []
         self.nodes_neighbor_times = []
+        
+        self.edge_pids = []
 
         if self.sample_neighbor_strategy == 'time_interval_aware':
             self.nodes_neighbor_sampled_probabilities = []
@@ -97,10 +99,13 @@ class NeighborSampler:
             # per_node_neighbors is a list of tuples (neighbor_id, edge_id, timestamp)
             # sort the list based on timestamps, sorted() function is stable
             # Note that sort the list based on edge id is also correct, as the original data file ensures the interactions are chronological
+            
             sorted_per_node_neighbors = sorted(per_node_neighbors, key=lambda x: x[2])
             self.nodes_neighbor_ids.append(np.array([x[0] for x in sorted_per_node_neighbors]))
             self.nodes_edge_ids.append(np.array([x[1] for x in sorted_per_node_neighbors]))
             self.nodes_neighbor_times.append(np.array([x[2] for x in sorted_per_node_neighbors]))
+            
+            self.edge_pids.append(np.array([x[3] for x in sorted_per_node_neighbors]))
 
             # additional for time interval aware sampling strategy (proposed in CAWN paper)
             if self.sample_neighbor_strategy == 'time_interval_aware':
@@ -127,30 +132,36 @@ class NeighborSampler:
         sampled_probabilities[np.isnan(sampled_probabilities)] = -1e10
         return sampled_probabilities
 
-    def find_neighbors_before(self, node_id: int, interact_time: float, return_sampled_probabilities: bool = False):
+    def find_neighbors_before(self, node_id: int, interact_time: float, max_pid:int, return_sampled_probabilities: bool = False):
         """
         extracts all the interactions happening before interact_time (less than interact_time) for node_id in the overall interaction graph
         the returned interactions are sorted by time.
         :param node_id: int, node id
         :param interact_time: float, interaction time
+        :param max_pid: int, maximum packet id for the node
         :param return_sampled_probabilities: boolean, whether return the sampled probabilities of neighbors
         :return: neighbors, edge_ids, timestamps and sampled_probabilities (if return_sampled_probabilities is True) with shape (historical_nodes_num, )
         """
         # return index i, which satisfies list[i - 1] < v <= list[i]
         # return 0 for the first position in self.nodes_neighbor_times since the value at the first position is empty
-        i = np.searchsorted(self.nodes_neighbor_times[node_id], interact_time)
+        
+        if max_pid < 0 :  
+            i = np.searchsorted(self.nodes_neighbor_times[node_id], interact_time, side='right')
+        else : 
+            i = np.searchsorted(self.edge_pids[node_id], max_pid, side='right')
 
         if return_sampled_probabilities:
             return self.nodes_neighbor_ids[node_id][:i], self.nodes_edge_ids[node_id][:i], self.nodes_neighbor_times[node_id][:i], \
-                   self.nodes_neighbor_sampled_probabilities[node_id][:i]
+                self.nodes_neighbor_sampled_probabilities[node_id][:i]
         else:
             return self.nodes_neighbor_ids[node_id][:i], self.nodes_edge_ids[node_id][:i], self.nodes_neighbor_times[node_id][:i], None
 
-    def get_historical_neighbors(self, node_ids: np.ndarray, node_interact_times: np.ndarray, num_neighbors: int = 20):
+    def get_historical_neighbors(self, node_ids: np.ndarray, node_interact_times: np.ndarray, node_pids:np.ndarray, num_neighbors: int = 20):
         """
         get historical neighbors of nodes in node_ids with interactions before the corresponding time in node_interact_times
         :param node_ids: ndarray, shape (batch_size, ) or (*, ), node ids
         :param node_interact_times: ndarray, shape (batch_size, ) or (*, ), node interaction times
+        :param max_pid: int, maximum packet id for the node
         :param num_neighbors: int, number of neighbors to sample for each node
         :return:
         """
@@ -165,12 +176,18 @@ class NeighborSampler:
         # each entry in position (i,j) represents the interaction time between src node node_ids[i] and dst node nodes_neighbor_ids[i][j], before node_interact_times[i]
         # ndarray, shape (batch_size, num_neighbors)
         nodes_neighbor_times = np.zeros((len(node_ids), num_neighbors)).astype(np.float32)
+        
+        nodes_neighbor_pids = np.zeros((len(node_ids), num_neighbors)).astype(np.float32)
+
 
         # extracts all neighbors ids, edge ids and interaction times of nodes in node_ids, which happened before the corresponding time in node_interact_times
-        for idx, (node_id, node_interact_time) in enumerate(zip(node_ids, node_interact_times)):
+        for idx, (node_id, node_interact_time, node_pid) in enumerate(zip(node_ids, node_interact_times, node_pids)):
+            
             # find neighbors that interacted with node_id before time node_interact_time
             node_neighbor_ids, node_edge_ids, node_neighbor_times, node_neighbor_sampled_probabilities = \
-                self.find_neighbors_before(node_id=node_id, interact_time=node_interact_time, return_sampled_probabilities=self.sample_neighbor_strategy == 'time_interval_aware')
+                self.find_neighbors_before(node_id=node_id, interact_time=node_interact_time, max_pid=node_pid, return_sampled_probabilities=self.sample_neighbor_strategy == 'time_interval_aware')
+
+            node_neighbor_pids = np.array([node_pid]*len(node_neighbor_ids))
 
             if len(node_neighbor_ids) > 0:
                 if self.sample_neighbor_strategy in ['uniform', 'time_interval_aware']:
@@ -189,6 +206,7 @@ class NeighborSampler:
                     nodes_neighbor_ids[idx, :] = node_neighbor_ids[sampled_indices]
                     nodes_edge_ids[idx, :] = node_edge_ids[sampled_indices]
                     nodes_neighbor_times[idx, :] = node_neighbor_times[sampled_indices]
+                    nodes_neighbor_pids[idx, :] = node_neighbor_pids[sampled_indices]
 
                     # resort based on timestamps, return the ids in sorted increasing order, note this maybe unstable when multiple edges happen at the same time
                     # (we still do this though this is unnecessary for TGAT or CAWN to guarantee the order of nodes,
@@ -197,23 +215,28 @@ class NeighborSampler:
                     nodes_neighbor_ids[idx, :] = nodes_neighbor_ids[idx, :][sorted_position]
                     nodes_edge_ids[idx, :] = nodes_edge_ids[idx, :][sorted_position]
                     nodes_neighbor_times[idx, :] = nodes_neighbor_times[idx, :][sorted_position]
+                    nodes_neighbor_pids[idx, :] = nodes_neighbor_pids[idx, :][sorted_position]
+                    
                 elif self.sample_neighbor_strategy == 'recent':
                     # Take most recent interactions with number num_neighbors
                     node_neighbor_ids = node_neighbor_ids[-num_neighbors:]
                     node_edge_ids = node_edge_ids[-num_neighbors:]
                     node_neighbor_times = node_neighbor_times[-num_neighbors:]
+                    node_neighbor_pids  = node_neighbor_pids[-num_neighbors:]
 
                     # put the neighbors' information at the back positions
                     nodes_neighbor_ids[idx, num_neighbors - len(node_neighbor_ids):] = node_neighbor_ids
                     nodes_edge_ids[idx, num_neighbors - len(node_edge_ids):] = node_edge_ids
                     nodes_neighbor_times[idx, num_neighbors - len(node_neighbor_times):] = node_neighbor_times
+                    nodes_neighbor_pids[idx, num_neighbors - len(node_neighbor_pids):] = node_neighbor_pids
+                    
                 else:
                     raise ValueError(f'Not implemented error for sample_neighbor_strategy {self.sample_neighbor_strategy}!')
 
         # three ndarrays, with shape (batch_size, num_neighbors)
-        return nodes_neighbor_ids, nodes_edge_ids, nodes_neighbor_times
+        return nodes_neighbor_ids, nodes_edge_ids, nodes_neighbor_times, nodes_neighbor_pids
 
-    def get_multi_hop_neighbors(self, num_hops: int, node_ids: np.ndarray, node_interact_times: np.ndarray, num_neighbors: int = 20):
+    def get_multi_hop_neighbors(self, num_hops: int, node_ids: np.ndarray, node_interact_times: np.ndarray, node_pids:np.ndarray, num_neighbors: int = 20):
         """
         get historical neighbors of nodes in node_ids within num_hops hops
         :param num_hops: int, number of sampled hops
@@ -226,45 +249,55 @@ class NeighborSampler:
 
         # get the temporal neighbors at the first hop
         # nodes_neighbor_ids, nodes_edge_ids, nodes_neighbor_times -> ndarray, shape (batch_size, num_neighbors)
-        nodes_neighbor_ids, nodes_edge_ids, nodes_neighbor_times = self.get_historical_neighbors(node_ids=node_ids,
-                                                                                                 node_interact_times=node_interact_times,
-                                                                                                 num_neighbors=num_neighbors)
+        nodes_neighbor_ids, nodes_edge_ids, nodes_neighbor_times, nodes_neighbor_pids = self.get_historical_neighbors(node_ids=node_ids,
+                                                                                        node_interact_times=node_interact_times,
+                                                                                        node_pids=node_pids,
+                                                                                        num_neighbors=num_neighbors)
+        
         # three lists to store the neighbor ids, edge ids and interaction timestamp information
         nodes_neighbor_ids_list = [nodes_neighbor_ids]
         nodes_edge_ids_list = [nodes_edge_ids]
         nodes_neighbor_times_list = [nodes_neighbor_times]
+        nodes_pids_list = [nodes_neighbor_pids]
+        
         for hop in range(1, num_hops):
             # get information of neighbors sampled at the current hop
             # three ndarrays, with shape (batch_size * num_neighbors ** hop, num_neighbors)
-            nodes_neighbor_ids, nodes_edge_ids, nodes_neighbor_times = self.get_historical_neighbors(node_ids=nodes_neighbor_ids_list[-1].flatten(),
-                                                                                                     node_interact_times=nodes_neighbor_times_list[-1].flatten(),
-                                                                                                     num_neighbors=num_neighbors)
+            nodes_neighbor_ids, nodes_edge_ids, nodes_neighbor_times, nodes_neighbor_pids = self.get_historical_neighbors(node_ids=nodes_neighbor_ids_list[-1].flatten(),
+                                                                                            node_interact_times=nodes_neighbor_times_list[-1].flatten(),
+                                                                                            node_pids=nodes_pids_list[-1].flatten(),
+                                                                                            num_neighbors=num_neighbors)
             # three ndarrays with shape (batch_size, num_neighbors ** (hop + 1))
             nodes_neighbor_ids = nodes_neighbor_ids.reshape(len(node_ids), -1)
             nodes_edge_ids = nodes_edge_ids.reshape(len(node_ids), -1)
             nodes_neighbor_times = nodes_neighbor_times.reshape(len(node_ids), -1)
+            nodes_neighbor_pids = nodes_neighbor_pids.reshape(len(node_ids), -1)
 
             nodes_neighbor_ids_list.append(nodes_neighbor_ids)
             nodes_edge_ids_list.append(nodes_edge_ids)
             nodes_neighbor_times_list.append(nodes_neighbor_times)
+            nodes_pids_list.append(nodes_neighbor_pids)
 
         # tuple, each element in the tuple is a list of num_hops ndarrays, each with shape (batch_size, num_neighbors ** current_hop)
         return nodes_neighbor_ids_list, nodes_edge_ids_list, nodes_neighbor_times_list
 
-    def get_all_first_hop_neighbors(self, node_ids: np.ndarray, node_interact_times: np.ndarray):
+    def get_all_first_hop_neighbors(self, node_ids: np.ndarray, node_interact_times: np.ndarray, node_pids: np.ndarray):
         """
         get historical neighbors of nodes in node_ids at the first hop with max_num_neighbors as the maximal number of neighbors (make the computation feasible)
         :param node_ids: ndarray, shape (batch_size, ), node ids
         :param node_interact_times: ndarray, shape (batch_size, ), node interaction times
+        :param max_pid: int, maximum packet id for the node
         :return:
         """
         # three lists to store the first-hop neighbor ids, edge ids and interaction timestamp information, with batch_size as the list length
         nodes_neighbor_ids_list, nodes_edge_ids_list, nodes_neighbor_times_list = [], [], []
         # get the temporal neighbors at the first hop
-        for idx, (node_id, node_interact_time) in enumerate(zip(node_ids, node_interact_times)):
+        for idx, (node_id, node_interact_time, node_pid) in enumerate(zip(node_ids, node_interact_times, node_pids)):
             # find neighbors that interacted with node_id before time node_interact_time
+            
             node_neighbor_ids, node_edge_ids, node_neighbor_times, _ = self.find_neighbors_before(node_id=node_id,
                                                                                                   interact_time=node_interact_time,
+                                                                                                  max_pid=node_pid,
                                                                                                   return_sampled_probabilities=False)
             nodes_neighbor_ids_list.append(node_neighbor_ids)
             nodes_edge_ids_list.append(node_edge_ids)
@@ -295,9 +328,9 @@ def get_neighbor_sampler(data: Data, sample_neighbor_strategy: str = 'uniform', 
     # adj_list, list of list, where each element is a list of triple tuple (node_id, edge_id, timestamp)
     # the list at the first position in adj_list is empty
     adj_list = [[] for _ in range(max_node_id + 1)]
-    for src_node_id, dst_node_id, edge_id, node_interact_time in zip(data.src_node_ids, data.dst_node_ids, data.edge_ids, data.node_interact_times):
-        adj_list[src_node_id].append((dst_node_id, edge_id, node_interact_time))
-        adj_list[dst_node_id].append((src_node_id, edge_id, node_interact_time))
+    for src_node_id, dst_node_id, edge_id, node_interact_time,packet_id in zip(data.src_node_ids, data.dst_node_ids, data.edge_ids, data.node_interact_times, data.packet_id):
+        adj_list[src_node_id].append((dst_node_id, edge_id, node_interact_time, packet_id))
+        adj_list[dst_node_id].append((src_node_id, edge_id, node_interact_time, packet_id))
 
     return NeighborSampler(adj_list=adj_list, sample_neighbor_strategy=sample_neighbor_strategy, time_scaling_factor=time_scaling_factor, seed=seed)
 

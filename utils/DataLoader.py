@@ -79,13 +79,11 @@ def get_link_prediction_data(dataset_name: str, val_ratio: float, test_ratio: fl
     graph_df = pd.read_csv('./processed_data/{}/ml_{}.csv'.format(dataset_name, dataset_name))
     edge_raw_features = np.load('./processed_data/{}/ml_{}.npy'.format(dataset_name, dataset_name))
     node_raw_features = np.load('./processed_data/{}/ml_{}_node.npy'.format(dataset_name, dataset_name))
-    additionnal_feat_df = pd.read_csv('./processed_data/{}_test/ml_{}_test_additional_labels.csv'.format(dataset_name, dataset_name))
 
     # Same with test
     graph_df_test = pd.read_csv('./processed_data/{}_test/ml_{}_test.csv'.format(dataset_name, dataset_name))
     edge_raw_features_test = np.load('./processed_data/{}_test/ml_{}_test.npy'.format(dataset_name, dataset_name))
     node_raw_features_test = np.load('./processed_data/{}_test/ml_{}_test_node.npy'.format(dataset_name, dataset_name))
-    additionnal_feat_df_test = pd.read_csv('./processed_data/{}_test/ml_{}_test_additional_labels.csv'.format(dataset_name, dataset_name))
 
     # Concatenate both train and
     edge_raw_features = np.concatenate([edge_raw_features, edge_raw_features_test], axis=0)
@@ -97,17 +95,17 @@ def get_link_prediction_data(dataset_name: str, val_ratio: float, test_ratio: fl
     node_interact_times = graph_df.ts.values.astype(np.float64)
     edge_ids = graph_df.idx.values.astype(np.longlong)
     labels = graph_df.label.values
-    packet_ids = additionnal_feat_df.packet_id.values
-    attack_type = additionnal_feat_df.attack_type.values
-    
+    packet_ids = graph_df.packet_id.values
+    attack_type = graph_df.attack_type.values
+        
     # Test
     src_node_ids_test = graph_df_test.u.values.astype(np.longlong)
     dst_node_ids_test = graph_df_test.i.values.astype(np.longlong)
     node_interact_times_test = graph_df_test.ts.values.astype(np.float64)
     edge_ids_test = graph_df_test.idx.values.astype(np.longlong)
     labels_test = graph_df_test.label.values
-    packet_ids_test = additionnal_feat_df_test.packet_id.values
-    attack_type_test = additionnal_feat_df_test.attack_type.values
+    packet_ids_test = graph_df_test.packet_id.values
+    attack_type_test = graph_df_test.attack_type.values
     
     # Full data (train + test)
     src_node_ids_full = np.concatenate([src_node_ids, src_node_ids_test], axis=0)

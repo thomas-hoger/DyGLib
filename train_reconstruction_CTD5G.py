@@ -10,7 +10,6 @@ import torch.nn as nn
 import torch
 
 from models.modules import MergeLayer
-from models.CTD5G_decoder import Decoder
 from models.TGAT import TGAT
 from models.MemoryModel import MemoryModel, compute_src_dst_node_time_shifts
 from models.CAWN import CAWN
@@ -38,10 +37,6 @@ if __name__ == "__main__":
     # initialize training neighbor sampler to retrieve temporal graph
     train_neighbor_sampler = get_neighbor_sampler(data=train_data, sample_neighbor_strategy=args.sample_neighbor_strategy,
                                                   time_scaling_factor=args.time_scaling_factor, seed=0)
-
-    # initialize validation and test neighbor sampler to retrieve temporal graph
-    full_neighbor_sampler = get_neighbor_sampler(data=full_data, sample_neighbor_strategy=args.sample_neighbor_strategy,
-                                                 time_scaling_factor=args.time_scaling_factor, seed=1)
 
     # get data loaders
     train_idx_data_loader = get_idx_data_loader(indices_list=list(range(len(train_data.src_node_ids))), batch_size=args.batch_size, shuffle=False)
@@ -147,11 +142,12 @@ if __name__ == "__main__":
             # store train losses and metrics
             train_losses, train_metrics = [], []
             train_idx_data_loader_tqdm = tqdm(train_idx_data_loader, ncols=120)
+                        
             for batch_idx, train_data_indices in enumerate(train_idx_data_loader_tqdm):
                 train_data_indices = train_data_indices.numpy()
-                batch_src_node_ids, batch_dst_node_ids, batch_node_interact_times, batch_edge_ids = \
+                batch_src_node_ids, batch_dst_node_ids, batch_node_interact_times, batch_edge_ids, batch_node_pids = \
                     train_data.src_node_ids[train_data_indices], train_data.dst_node_ids[train_data_indices], \
-                    train_data.node_interact_times[train_data_indices], train_data.edge_ids[train_data_indices]
+                    train_data.node_interact_times[train_data_indices], train_data.edge_ids[train_data_indices], train_data.packet_id[train_data_indices]
 
                 # we need to compute for positive and negative edges respectively, because the new sampling strategy (for evaluation) allows the negative source nodes to be
                 # different from the source nodes, this is different from previous works that just replace destination nodes with negative destination nodes
@@ -162,6 +158,7 @@ if __name__ == "__main__":
                         model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_src_node_ids,
                                                                           dst_node_ids=batch_dst_node_ids,
                                                                           node_interact_times=batch_node_interact_times,
+                                                                          node_pids=batch_node_pids,
                                                                           num_neighbors=args.num_neighbors)
 
                 elif args.model_name in ['JODIE', 'DyRep', 'TGN']:
@@ -172,6 +169,7 @@ if __name__ == "__main__":
                         model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_src_node_ids,
                                                                           dst_node_ids=batch_dst_node_ids,
                                                                           node_interact_times=batch_node_interact_times,
+                                                                          node_pids=batch_node_pids,
                                                                           edge_ids=batch_edge_ids,
                                                                           edges_are_positive=True,
                                                                           num_neighbors=args.num_neighbors)
@@ -182,6 +180,7 @@ if __name__ == "__main__":
                         model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_src_node_ids,
                                                                           dst_node_ids=batch_dst_node_ids,
                                                                           node_interact_times=batch_node_interact_times,
+                                                                          node_pids=batch_node_pids,  
                                                                           num_neighbors=args.num_neighbors,
                                                                           time_gap=args.time_gap)
 
@@ -191,15 +190,16 @@ if __name__ == "__main__":
                     batch_src_node_embeddings, batch_dst_node_embeddings = \
                         model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_src_node_ids,
                                                                           dst_node_ids=batch_dst_node_ids,
-                                                                          node_interact_times=batch_node_interact_times)
+                                                                          node_interact_times=batch_node_interact_times,
+                                                                          node_pids=batch_node_pids)
 
                 else:
                     raise ValueError(f"Wrong value for model_name {args.model_name}!")
                 
                 event_embedding = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
                 original_msg = model[0].edge_raw_features[batch_edge_ids]
-                loss  = loss_func(input=event_embedding, target=original_msg)
-
+                loss = loss_func(input=event_embedding, target=original_msg)
+                
                 train_losses.append(loss.item())
 
                 optimizer.zero_grad()

@@ -84,7 +84,7 @@ class MemoryModel(torch.nn.Module):
         else:
             raise ValueError(f'Not implemented error for model_name {self.model_name}!')
 
-    def compute_src_dst_node_temporal_embeddings(self, src_node_ids: np.ndarray, dst_node_ids: np.ndarray, node_interact_times: np.ndarray,
+    def compute_src_dst_node_temporal_embeddings(self, src_node_ids: np.ndarray, dst_node_ids: np.ndarray, node_interact_times: np.ndarray, node_pids: np.ndarray,
                                                  edge_ids: np.ndarray, edges_are_positive: bool = True, num_neighbors: int = 20):
         """
         compute source and destination node temporal embeddings
@@ -128,6 +128,8 @@ class MemoryModel(torch.nn.Module):
                                                                                      node_ids=node_ids,
                                                                                      node_interact_times=np.concatenate([node_interact_times,
                                                                                                                          node_interact_times]),
+                                                                                     node_pids=np.concatenate([node_pids,
+                                                                                                               node_pids]),
                                                                                      current_layer_num=self.num_layers,
                                                                                      num_neighbors=num_neighbors)
         else:
@@ -586,7 +588,7 @@ class GraphAttentionEmbedding(nn.Module):
                                                       hidden_dim=self.node_feat_dim, output_dim=self.node_feat_dim) for _ in range(num_layers)])
 
     def compute_node_temporal_embeddings(self, node_memories: torch.Tensor, node_ids: np.ndarray, node_interact_times: np.ndarray,
-                                         current_layer_num: int, num_neighbors: int = 20):
+                                         node_pids: np.ndarray, current_layer_num: int, num_neighbors: int = 20):
         """
         given memory, node ids node_ids, and the corresponding time node_interact_times,
         return the temporal embeddings after convolution at the current_layer_num
@@ -616,6 +618,7 @@ class GraphAttentionEmbedding(nn.Module):
             node_conv_features = self.compute_node_temporal_embeddings(node_memories=node_memories,
                                                                        node_ids=node_ids,
                                                                        node_interact_times=node_interact_times,
+                                                                       node_pids=node_pids,
                                                                        current_layer_num=current_layer_num - 1,
                                                                        num_neighbors=num_neighbors)
 
@@ -623,9 +626,10 @@ class GraphAttentionEmbedding(nn.Module):
             # neighbor_node_ids ndarray, shape (batch_size, num_neighbors)
             # neighbor_edge_ids ndarray, shape (batch_size, num_neighbors)
             # neighbor_times ndarray, shape (batch_size, num_neighbors)
-            neighbor_node_ids, neighbor_edge_ids, neighbor_times = \
+            neighbor_node_ids, neighbor_edge_ids, neighbor_times, neighbor_pids = \
                 self.neighbor_sampler.get_historical_neighbors(node_ids=node_ids,
                                                                node_interact_times=node_interact_times,
+                                                               node_pids=node_pids,
                                                                num_neighbors=num_neighbors)
 
             # get neighbor features from previous layers
@@ -633,6 +637,7 @@ class GraphAttentionEmbedding(nn.Module):
             neighbor_node_conv_features = self.compute_node_temporal_embeddings(node_memories=node_memories,
                                                                                 node_ids=neighbor_node_ids.flatten(),
                                                                                 node_interact_times=neighbor_times.flatten(),
+                                                                                node_pids=neighbor_pids.flatten(),
                                                                                 current_layer_num=current_layer_num - 1,
                                                                                 num_neighbors=num_neighbors)
 
