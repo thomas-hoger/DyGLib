@@ -183,20 +183,20 @@ def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sa
             mask = batch_attack == selected_attack
             selected_attack_label = list(attack_type_vocab.keys())[selected_attack]
             
-            original_msg = model[0].edge_raw_features[batch_edge_ids][mask]
-            event_embedding = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()[mask]
+            original_msg = model[0].edge_raw_features[batch_edge_ids]
+            event_embedding = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
             
             for i in range(len(event_embedding)):
                 src = batch_src_node_ids[mask][i].item()
                 dst = batch_dst_node_ids[mask][i].item()
 
-                edge_text = list(feature_vocab.keys())[original_msg[i].argmax().item()]
+                edge_text = list(feature_vocab.keys())[original_msg[mask][i].argmax().item()]
 
-                loss = loss_func(event_embedding[i], original_msg[i]).item()
-                norm_loss = (loss - loss_min) / (loss_max - loss_min)
-                loss = max(0, min(1, norm_loss))
+                loss_masked = loss_func(event_embedding[mask][i], original_msg[mask][i]).item()
+                norm_loss = (loss_masked - loss_min) / (loss_max - loss_min)
+                loss_masked = max(0, min(1, norm_loss))
                 
-                color = cmap(loss)
+                color = cmap(loss_masked)
 
                 if batch_label[mask][i].item() == 1:
                     node_colors[src] = "red"
@@ -206,8 +206,9 @@ def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sa
 
                 node_labels[src] = selected_attack_label
 
-                nx_graph.add_edge(batch_src_node_ids[mask][i].item(), batch_dst_node_ids[mask][i].item(), label=edge_text, color=color, loss=loss)
+                nx_graph.add_edge(batch_src_node_ids[mask][i].item(), batch_dst_node_ids[mask][i].item(), label=edge_text, color=color, loss=loss_masked)
 
+                loss = loss_func(event_embedding[i], original_msg[i]).item()
                 evaluate_losses.append(loss)
                 evaluate_embeddings.append(event_embedding[i])
                 

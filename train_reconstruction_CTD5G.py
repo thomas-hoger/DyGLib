@@ -18,8 +18,7 @@ from models.GraphMixer import GraphMixer
 from models.DyGFormer import DyGFormer
 from utils.utils import set_random_seed, convert_to_gpu, get_parameter_sizes, create_optimizer
 from utils.utils import get_neighbor_sampler
-from evaluate_models_utils import evaluate_model_reconstruction
-from utils.DataLoader import get_idx_data_loader, get_link_prediction_data
+from utils.DataLoader import get_idx_data_loader, get_reconstruction_data
 from utils.EarlyStopping import EarlyStopping
 from utils.load_configs import get_link_prediction_args
 
@@ -32,7 +31,7 @@ if __name__ == "__main__":
 
     # get data for training, validation and testing
     node_raw_features, edge_raw_features, full_data, train_data, test_data = \
-        get_link_prediction_data(dataset_name=args.dataset_name, val_ratio=args.val_ratio, test_ratio=args.test_ratio)
+        get_reconstruction_data(dataset_name=args.dataset_name, val_ratio=args.val_ratio, test_ratio=args.test_ratio)
 
     # initialize training neighbor sampler to retrieve temporal graph
     train_neighbor_sampler = get_neighbor_sampler(data=train_data, sample_neighbor_strategy=args.sample_neighbor_strategy,
