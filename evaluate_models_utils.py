@@ -180,33 +180,35 @@ def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sa
             node_colors = {}
             node_labels = {}
             
-            mask = batch_attack == selected_attack
             selected_attack_label = list(attack_type_vocab.keys())[selected_attack]
             
             original_msg = model[0].edge_raw_features[batch_edge_ids]
             event_embedding = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
             
             for i in range(len(event_embedding)):
-                src = batch_src_node_ids[mask][i].item()
-                dst = batch_dst_node_ids[mask][i].item()
-
-                edge_text = list(feature_vocab.keys())[original_msg[mask][i].argmax().item()]
-
-                loss_masked = loss_func(event_embedding[mask][i], original_msg[mask][i]).item()
-                norm_loss = (loss_masked - loss_min) / (loss_max - loss_min)
-                loss_masked = max(0, min(1, norm_loss))
                 
-                color = cmap(loss_masked)
+                if batch_attack[i] == selected_attack:
+                
+                    src = batch_src_node_ids[i].item()
+                    dst = batch_dst_node_ids[i].item()
 
-                if batch_label[mask][i].item() == 1:
-                    node_colors[src] = "red"
-                else:
-                    node_colors[src] = "blue"
-                node_colors[dst] = "black"
+                    edge_text = list(feature_vocab.keys())[original_msg[i].argmax().item()]
 
-                node_labels[src] = selected_attack_label
+                    loss_masked = loss_func(event_embedding[i], original_msg[i]).item()
+                    norm_loss = (loss_masked - loss_min) / (loss_max - loss_min)
+                    loss_masked = max(0, min(1, norm_loss))
+                    
+                    color = cmap(loss_masked)
 
-                nx_graph.add_edge(batch_src_node_ids[mask][i].item(), batch_dst_node_ids[mask][i].item(), label=edge_text, color=color, loss=loss_masked)
+                    if batch_label[i].item() == 1:
+                        node_colors[src] = "red"
+                    else:
+                        node_colors[src] = "blue"
+                    node_colors[dst] = "black"
+
+                    node_labels[src] = selected_attack_label
+
+                    nx_graph.add_edge(batch_src_node_ids[i].item(), batch_dst_node_ids[i].item(), label=edge_text, color=color, loss=loss_masked)
 
                 loss = loss_func(event_embedding[i], original_msg[i]).item()
                 evaluate_losses.append(loss)
