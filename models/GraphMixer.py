@@ -94,7 +94,7 @@ class GraphMixer(nn.Module):
         neighbor_node_ids, neighbor_edge_ids, neighbor_times, _ = \
             self.neighbor_sampler.get_historical_neighbors(node_ids=node_ids,
                                                            node_interact_times=node_interact_times,
-                                                           max_pid=node_pids,
+                                                           node_pids=node_pids,
                                                            num_neighbors=num_neighbors)
 
         # Tensor, shape (batch_size, num_neighbors, edge_feat_dim)
@@ -122,7 +122,7 @@ class GraphMixer(nn.Module):
         # time_gap_neighbor_node_ids, ndarray, shape (batch_size, time_gap)
         time_gap_neighbor_node_ids, _, _, _ = self.neighbor_sampler.get_historical_neighbors(node_ids=node_ids,
                                                                                           node_interact_times=node_interact_times,
-                                                                                          max_pid=node_pids,
+                                                                                          node_pids=node_pids,
                                                                                           num_neighbors=time_gap)
 
         # Tensor, shape (batch_size, time_gap, node_feat_dim)

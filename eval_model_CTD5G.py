@@ -11,7 +11,6 @@ import torch.nn as nn
 import torch
 
 from models.modules import MergeLayer
-from models.CTD5G_decoder import Decoder
 from models.TGAT import TGAT
 from models.MemoryModel import MemoryModel, compute_src_dst_node_time_shifts
 from models.CAWN import CAWN
@@ -37,8 +36,9 @@ if __name__ == "__main__":
         get_link_prediction_data(dataset_name=args.dataset_name, val_ratio=args.val_ratio, test_ratio=args.test_ratio)
 
     # initialize validation and test neighbor sampler to retrieve temporal graph
-    full_neighbor_sampler = get_neighbor_sampler(data=full_data, sample_neighbor_strategy=args.sample_neighbor_strategy,
-                                                 time_scaling_factor=args.time_scaling_factor, seed=1)
+    test_neighbor_sampler = get_neighbor_sampler(data=test_data, sample_neighbor_strategy=args.sample_neighbor_strategy,
+                                                  time_scaling_factor=args.time_scaling_factor, seed=0)
+
 
     # get data loaders
     test_idx_data_loader = get_idx_data_loader(indices_list=list(range(len(test_data.src_node_ids))), batch_size=args.batch_size, shuffle=False)
@@ -77,29 +77,29 @@ if __name__ == "__main__":
 
     # create model
     if args.model_name == 'TGAT':
-        dynamic_backbone = TGAT(node_raw_features=node_raw_features, edge_raw_features=edge_raw_features, neighbor_sampler=full_neighbor_sampler,
+        dynamic_backbone = TGAT(node_raw_features=node_raw_features, edge_raw_features=edge_raw_features, neighbor_sampler=test_neighbor_sampler,
                                 time_feat_dim=args.time_feat_dim, num_layers=args.num_layers, num_heads=args.num_heads, dropout=args.dropout, device=args.device)
     elif args.model_name in ['JODIE', 'DyRep', 'TGN']:
         # four floats that represent the mean and standard deviation of source and destination node time shifts in the training data, which is used for JODIE
         src_node_mean_time_shift, src_node_std_time_shift, dst_node_mean_time_shift_dst, dst_node_std_time_shift = \
             compute_src_dst_node_time_shifts(train_data.src_node_ids, train_data.dst_node_ids, train_data.node_interact_times)
-        dynamic_backbone = MemoryModel(node_raw_features=node_raw_features, edge_raw_features=edge_raw_features, neighbor_sampler=full_neighbor_sampler,
+        dynamic_backbone = MemoryModel(node_raw_features=node_raw_features, edge_raw_features=edge_raw_features, neighbor_sampler=test_neighbor_sampler,
                                         time_feat_dim=args.time_feat_dim, model_name=args.model_name, num_layers=args.num_layers, num_heads=args.num_heads,
                                         dropout=args.dropout, src_node_mean_time_shift=src_node_mean_time_shift, src_node_std_time_shift=src_node_std_time_shift,
                                         dst_node_mean_time_shift_dst=dst_node_mean_time_shift_dst, dst_node_std_time_shift=dst_node_std_time_shift, device=args.device)
     elif args.model_name == 'CAWN':
-        dynamic_backbone = CAWN(node_raw_features=node_raw_features, edge_raw_features=edge_raw_features, neighbor_sampler=full_neighbor_sampler,
+        dynamic_backbone = CAWN(node_raw_features=node_raw_features, edge_raw_features=edge_raw_features, neighbor_sampler=test_neighbor_sampler,
                                 time_feat_dim=args.time_feat_dim, position_feat_dim=args.position_feat_dim, walk_length=args.walk_length,
                                 num_walk_heads=args.num_walk_heads, dropout=args.dropout, device=args.device)
     elif args.model_name == 'TCL':
-        dynamic_backbone = TCL(node_raw_features=node_raw_features, edge_raw_features=edge_raw_features, neighbor_sampler=full_neighbor_sampler,
+        dynamic_backbone = TCL(node_raw_features=node_raw_features, edge_raw_features=edge_raw_features, neighbor_sampler=test_neighbor_sampler,
                                 time_feat_dim=args.time_feat_dim, num_layers=args.num_layers, num_heads=args.num_heads,
                                 num_depths=args.num_neighbors + 1, dropout=args.dropout, device=args.device)
     elif args.model_name == 'GraphMixer':
-        dynamic_backbone = GraphMixer(node_raw_features=node_raw_features, edge_raw_features=edge_raw_features, neighbor_sampler=full_neighbor_sampler,
+        dynamic_backbone = GraphMixer(node_raw_features=node_raw_features, edge_raw_features=edge_raw_features, neighbor_sampler=test_neighbor_sampler,
                                         time_feat_dim=args.time_feat_dim, num_tokens=args.num_neighbors, num_layers=args.num_layers, dropout=args.dropout, device=args.device)
     elif args.model_name == 'DyGFormer':
-        dynamic_backbone = DyGFormer(node_raw_features=node_raw_features, edge_raw_features=edge_raw_features, neighbor_sampler=full_neighbor_sampler,
+        dynamic_backbone = DyGFormer(node_raw_features=node_raw_features, edge_raw_features=edge_raw_features, neighbor_sampler=test_neighbor_sampler,
                                         time_feat_dim=args.time_feat_dim, channel_embedding_dim=args.channel_embedding_dim, patch_size=args.patch_size,
                                         num_layers=args.num_layers, num_heads=args.num_heads, dropout=args.dropout,
                                         max_input_sequence_length=args.max_input_sequence_length, device=args.device)
@@ -126,7 +126,7 @@ if __name__ == "__main__":
 
     if args.model_name in ['DyRep', 'TGAT', 'TGN', 'CAWN', 'TCL', 'GraphMixer', 'DyGFormer']:
         # training, only use training graph
-        model[0].set_neighbor_sampler(full_neighbor_sampler)
+        model[0].set_neighbor_sampler(test_neighbor_sampler)
         
     model.load_state_dict(torch.load(save_model_folder + "model_3.pkl", map_location='cpu'))
     if args.model_name in ['JODIE', 'DyRep', 'TGN']:
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     test_losses, test_metrics = evaluate_model_reconstruction(
         model_name=args.model_name,
         model=model,
-        neighbor_sampler=full_neighbor_sampler,
+        neighbor_sampler=test_neighbor_sampler,
         evaluate_idx_data_loader=test_idx_data_loader,
         evaluate_data=test_data,
         loss_func=loss_func,

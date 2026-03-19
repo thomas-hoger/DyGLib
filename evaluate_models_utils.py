@@ -102,7 +102,12 @@ def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sa
 
     with torch.no_grad():
         # store evaluate losses and metrics
-        evaluate_losses, evaluate_metrics = [], []
+        evaluate_losses = []
+        evaluate_embeddings = []
+        
+        evaluate_metrics = []
+        
+        
         evaluate_idx_data_loader_tqdm = tqdm(evaluate_idx_data_loader, ncols=120)
         for batch_idx, evaluate_data_indices in enumerate(evaluate_idx_data_loader_tqdm):
             evaluate_data_indices = evaluate_data_indices.numpy()
@@ -119,6 +124,7 @@ def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sa
                 batch_src_node_embeddings, batch_dst_node_embeddings = \
                     model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_src_node_ids,
                                                                       dst_node_ids=batch_dst_node_ids,
+                                                                      node_pids=batch_packet_id,
                                                                       node_interact_times=batch_node_interact_times,
                                                                       num_neighbors=num_neighbors)
 
@@ -129,6 +135,7 @@ def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sa
                     model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_src_node_ids,
                                                                       dst_node_ids=batch_dst_node_ids,
                                                                       node_interact_times=batch_node_interact_times,
+                                                                      node_pids=batch_packet_id,
                                                                       edge_ids=batch_edge_ids,
                                                                       edges_are_positive=True,
                                                                       num_neighbors=num_neighbors)
@@ -140,6 +147,7 @@ def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sa
                                                                       dst_node_ids=batch_dst_node_ids,
                                                                       node_interact_times=batch_node_interact_times,
                                                                       num_neighbors=num_neighbors,
+                                                                      node_pids=batch_packet_id,
                                                                       time_gap=time_gap)
 
             elif model_name in ['DyGFormer']:
@@ -148,7 +156,8 @@ def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sa
                 batch_src_node_embeddings, batch_dst_node_embeddings = \
                     model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_src_node_ids,
                                                                       dst_node_ids=batch_dst_node_ids,
-                                                                      node_interact_times=batch_node_interact_times)
+                                                                      node_interact_times=batch_node_interact_times,
+                                                                      node_pids=batch_packet_id)
 
             else:
                 raise ValueError(f"Wrong value for model_name {model_name}!")
@@ -174,8 +183,8 @@ def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sa
             mask = batch_attack == selected_attack
             selected_attack_label = list(attack_type_vocab.keys())[selected_attack]
             
-            event_embedding = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()[mask]
             original_msg = model[0].edge_raw_features[batch_edge_ids][mask]
+            event_embedding = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()[mask]
             
             for i in range(len(event_embedding)):
                 src = batch_src_node_ids[mask][i].item()
@@ -200,20 +209,23 @@ def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sa
                 nx_graph.add_edge(batch_src_node_ids[mask][i].item(), batch_dst_node_ids[mask][i].item(), label=edge_text, color=color, loss=loss)
 
                 evaluate_losses.append(loss)
+                evaluate_embeddings.append(event_embedding[i])
                 
             save_dir = f'./figures/{model_name}/{selected_attack_label}_{attack_counters[selected_attack]}.png'
             os.makedirs(f'./figures/{model_name}', exist_ok=True)
 
-            plot_graph_with_loss(nx_graph, node_colors, node_labels, save_dir)
-                
             evaluate_idx_data_loader_tqdm.set_description(f'evaluate for the {batch_idx + 1}-th batch, evaluate loss: {loss}, {len(attack_counters)}/{len(attack_type_vocab)} attack types')
             
-            if len(attack_counters) == len(attack_type_vocab):
-                if all(count >= 3 for count in attack_counters.values()):
-                    break
+            if attack_counters[selected_attack] < 3:
+                plot_graph_with_loss(nx_graph, node_colors, node_labels, save_dir)
 
-    print(min(evaluate_losses), max(evaluate_losses), np.mean(evaluate_losses))
 
+    os.makedirs('./losses', exist_ok=True)
+    np.save(f'./losses/{model_name}.npy', np.array(evaluate_losses))
+        
+    os.makedirs('./embeddings', exist_ok=True)
+    np.save(f'./embeddings/{model_name}.npy', np.array(evaluate_embeddings)) 
+      
     return evaluate_losses, evaluate_metrics
 
 def evaluate_model_link_prediction(model_name: str, model: nn.Module, neighbor_sampler: NeighborSampler, evaluate_idx_data_loader: DataLoader,

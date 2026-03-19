@@ -59,6 +59,7 @@ class CAWN(nn.Module):
         # tuple, each element in the tuple is a list of self.walk_length ndarrays, each with shape (batch_size, num_neighbors ** current_hop)
         src_node_multi_hop_graphs = self.neighbor_sampler.get_multi_hop_neighbors(num_hops=self.walk_length, node_ids=src_node_ids,
                                                                                   node_interact_times=node_interact_times, node_pids=node_pids, num_neighbors=num_neighbors)
+        
         # tuple, each element in the tuple is a list of self.walk_length ndarrays, each with shape (batch_size, num_neighbors ** current_hop)
         dst_node_multi_hop_graphs = self.neighbor_sampler.get_multi_hop_neighbors(num_hops=self.walk_length, node_ids=dst_node_ids,
                                                                                   node_interact_times=node_interact_times, node_pids=node_pids, num_neighbors=num_neighbors)

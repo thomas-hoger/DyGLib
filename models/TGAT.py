@@ -108,7 +108,7 @@ class TGAT(nn.Module):
             # shape (batch_size * num_neighbors, node_feat_dim)
             neighbor_node_conv_features = self.compute_node_temporal_embeddings(node_ids=neighbor_node_ids.flatten(),
                                                                                 node_interact_times=neighbor_times.flatten(),
-                                                                                node_pids=neighbor_pids,
+                                                                                node_pids=neighbor_pids.flatten(),
                                                                                 current_layer_num=current_layer_num - 1,
                                                                                 num_neighbors=num_neighbors)
             # shape (batch_size, num_neighbors, node_feat_dim)

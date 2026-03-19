@@ -30,9 +30,9 @@ def preprocess(dataset_name: str):
         for idx, line in tqdm(enumerate(f), desc='preprocessing data', total=4130000):
             e = line.strip().split(',')
             # user_id
-            u = int(e[0])
+            u = int(e[0])+1
             # item_id
-            i = int(e[1])
+            i = int(e[1])+1
 
             # timestamp
             ts = float(e[2])

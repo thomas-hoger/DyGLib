@@ -1,6 +1,9 @@
 nohup.out
 figures/*
 saved_models*/*
+old/
+losses/
+embeddings/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
