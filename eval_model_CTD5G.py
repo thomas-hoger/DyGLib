@@ -130,7 +130,7 @@ if __name__ == "__main__":
         
     model.load_state_dict(torch.load(save_model_folder + "model_3.pkl", map_location='cpu'))
     if args.model_name in ['JODIE', 'DyRep', 'TGN']:
-        model[0].memory_bank.node_raw_messages = torch.load(save_model_folder + "nonparametric_3.pkl", map_location='cpu')
+        model[0].memory_bank.node_raw_messages = torch.load(save_model_folder + "nonparametric_3.pkl", map_location='cpu', weights_only=False)
 
     test_losses, test_metrics = evaluate_model_reconstruction(
         model_name=args.model_name,
