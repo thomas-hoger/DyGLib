@@ -27,7 +27,8 @@ from utils.load_configs import get_link_prediction_args
 if __name__ == "__main__":
 
     warnings.filterwarnings('ignore')
-
+    logging.getLogger('matplotlib').setLevel(logging.WARNING)
+    
     # get arguments
     args = get_link_prediction_args(is_evaluation=False)
 
@@ -106,6 +107,11 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Wrong value for model_name {args.model_name}!")
     
+    # print(edge_raw_features[0])
+    # for i in range(5):
+    #     print(i,train_data.src_node_ids[i],train_data.dst_node_ids[i],
+    #           train_data.edge_ids[i], edge_raw_features[train_data.edge_ids[i]].argmax().item())
+
     edge_feature_dim = edge_raw_features.shape[1]
     # link_predictor   = Decoder(in_channels=edge_feature_dim, out_channels=edge_feature_dim)
     link_predictor = MergeLayer(input_dim1=node_raw_features.shape[1], input_dim2=node_raw_features.shape[1],

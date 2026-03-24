@@ -106,6 +106,9 @@ def get_reconstruction_data(dataset_name: str, val_ratio: float, test_ratio: flo
     packet_ids_test = graph_df_test.packet_id.values
     attack_type_test = graph_df_test.attack_type.values
     
+    # readjust the indexes
+    edge_ids_test += edge_ids.max() + 1 
+    
     # Full data (train + test)
     src_node_ids_full = np.concatenate([src_node_ids, src_node_ids_test], axis=0)
     dst_node_ids_full = np.concatenate([dst_node_ids, dst_node_ids_test], axis=0)

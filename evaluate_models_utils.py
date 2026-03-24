@@ -192,21 +192,26 @@ def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sa
                     src = batch_src_node_ids[i].item()
                     dst = batch_dst_node_ids[i].item()
 
-                    edge_text = list(feature_vocab.keys())[original_msg[i].argmax().item()]
+                    if attack_counters[selected_attack] < 3:
+                        
+                        edge_text = list(feature_vocab.keys())[original_msg[i].argmax().item()]
 
-                    loss_masked = loss_func(event_embedding[i], original_msg[i]).item()
-                    norm_loss = (loss_masked - loss_min) / (loss_max - loss_min)
-                    loss_masked = max(0, min(1, norm_loss))
-                    
-                    color = cmap(loss_masked)
+                        loss_masked = loss_func(event_embedding[i], original_msg[i]).item()
+                        norm_loss = (loss_masked - loss_min) / (loss_max - loss_min)
+                        loss_masked = max(0, min(1, norm_loss))
+                        
+                        if attack_counters[selected_attack] == 1 and selected_attack_label == "restart":
+                            print(i,src,dst,batch_edge_ids[i],original_msg[i].argmax().item(),edge_text)
+                        
+                        color = cmap(loss_masked)
 
-                    if batch_label[i].item() == 1:
-                        node_colors[src] = "red"
-                    else:
-                        node_colors[src] = "blue"
-                    node_colors[dst] = "black"
+                        if batch_label[i].item() == 1:
+                            node_colors[src] = "red"
+                        else:
+                            node_colors[src] = "blue"
+                        node_colors[dst] = "black"
 
-                    node_labels[src] = selected_attack_label
+                        node_labels[src] = selected_attack_label
 
                     nx_graph.add_edge(batch_src_node_ids[i].item(), batch_dst_node_ids[i].item(), label=edge_text, color=color, loss=loss_masked)
 
@@ -221,6 +226,9 @@ def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sa
             
             if attack_counters[selected_attack] < 3:
                 plot_graph_with_loss(nx_graph, node_colors, node_labels, save_dir)
+            
+            if sum(attack_counters.values()) >= 2*len(attack_type_vocab):
+                break
 
 
     os.makedirs('./losses', exist_ok=True)

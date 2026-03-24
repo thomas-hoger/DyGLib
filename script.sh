@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# models=('JODIE' 'DyRep' 'TGAT' 'TGN' 'CAWN' 'EdgeBank' 'TCL' 'GraphMixer')
-# models=('DyGFormer')
+# models=('JODIE' 'DyRep' 'TGAT' 'TGN' 'CAWN' 'TCL' 'GraphMixer')
+models=('JODIE' 'DyRep' 'DyGFormer' 'TGN' 'TCL' 'GraphMixer')
 
-models=('DyGFormer' 'GraphMixer' 'TGAT', 'TCL')
+# models=('DyGFormer' 'GraphMixer' 'TGAT', 'TCL')
 
 for model in "${models[@]}"; do
     # python train_reconstruction_CTD5G.py --num_epochs=3 --model_name="$model"
