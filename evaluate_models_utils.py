@@ -1,5 +1,6 @@
 import pandas as pd
 
+from sklearn.decomposition import PCA
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -27,7 +28,7 @@ feature_vocab = {'http2.path': 0, 'pfcp.seid': 1, 'pfcp.f_teid.teid': 2, 'gtp.ex
 attack_type_vocab = {'user_traffic': 0, 'modify_drop': 1, 'flood_etablishment': 2, 'applicative_scan': 3, 'seid_fuzzing': 4, 'pfcp_in_gtp': 5, 'uplink_wake_random_u': 6, 'set_random_ue_idle': 7, 'cn_mitm': 8, 'add_random_nf': 9, 'remove_random_nf': 10, 'flood_deletion': 11, 'uplink_spoofing': 12, 'fuzz': 13, 'downlink_wake_random': 14, 'modify_dupl': 15, 'deregister_random_ue': 16, 'register_random_ue': 17, 'restart': 18, 'unknown': 19}
 
 loss_min = 0
-loss_max = 1 
+loss_max = 0.65
 
 def plot_graph_with_loss(nx_graph, node_colors, node_labels, save_dir):
     pos = nx.spring_layout(nx_graph, seed=42)
@@ -73,8 +74,39 @@ def plot_graph_with_loss(nx_graph, node_colors, node_labels, save_dir):
     plt.title("Graph with Loss Gradient (Green → Red)")
     plt.axis("off")
     plt.savefig(save_dir)
-    print(f"Saved graph to {save_dir}")
 
+
+def pca_loss(local_embeddings, local_labels, local_procedures, save_dir):
+
+    pca = PCA(n_components=2)
+    local_embeddings_2d = pca.fit_transform(local_embeddings)
+
+    plt.figure(figsize=(8, 6))
+
+    unique_procs = list(set(local_procedures))
+    proc_to_int = {proc: i for i, proc in enumerate(unique_procs)}
+    colors = [proc_to_int[p] for p in local_procedures]
+
+    plt.scatter(
+        local_embeddings_2d[:, 0], local_embeddings_2d[:, 1],
+        c=colors, cmap='tab10', alpha=0.7
+    )
+
+    handles = []
+    for proc, i in proc_to_int.items():
+        handles.append(plt.Line2D([0], [0], marker='o', color='w',
+                                 label=proc,
+                                 markerfacecolor=plt.cm.tab10(i),
+                                 markersize=8))
+    plt.legend(handles=handles, title="Procedures")
+
+    for i, label in enumerate(local_labels):
+        plt.annotate(label, (local_embeddings_2d[i, 0], local_embeddings_2d[i, 1]), fontsize=8)
+
+    plt.grid()
+    plt.savefig(save_dir)
+    plt.close()
+    print(f"PCA plot saved to {save_dir}")
 
 def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sampler: NeighborSampler, evaluate_idx_data_loader: DataLoader,
                                    evaluate_data: Data, loss_func: nn.Module, num_neighbors: int = 20, time_gap: int = 2000, df_labels: pd.DataFrame = None):
@@ -177,8 +209,17 @@ def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sa
                 continue 
 
             nx_graph = nx.Graph()
+            nx_full_graph = nx.Graph()
+            
             node_colors = {}
             node_labels = {}
+            
+            full_node_colors = {}
+            full_node_labels = {}
+            
+            local_embeddings = []
+            local_labels     = []
+            local_procedures = []
             
             selected_attack_label = list(attack_type_vocab.keys())[selected_attack]
             
@@ -186,49 +227,63 @@ def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sa
             event_embedding = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
             
             for i in range(len(event_embedding)):
-                
-                if batch_attack[i] == selected_attack:
-                
-                    src = batch_src_node_ids[i].item()
-                    dst = batch_dst_node_ids[i].item()
+                                
+                src = batch_src_node_ids[i].item()
+                dst = batch_dst_node_ids[i].item()
 
-                    if attack_counters[selected_attack] < 3:
-                        
-                        edge_text = list(feature_vocab.keys())[original_msg[i].argmax().item()]
+                if attack_counters[selected_attack] < 3:
+                    
+                    edge_text = list(feature_vocab.keys())[original_msg[i].argmax().item()]
 
-                        loss_masked = loss_func(event_embedding[i], original_msg[i]).item()
-                        norm_loss = (loss_masked - loss_min) / (loss_max - loss_min)
-                        loss_masked = max(0, min(1, norm_loss))
-                        
-                        if attack_counters[selected_attack] == 1 and selected_attack_label == "restart":
-                            print(i,src,dst,batch_edge_ids[i],original_msg[i].argmax().item(),edge_text)
-                        
-                        color = cmap(loss_masked)
+                    loss_masked = loss_func(event_embedding[i], original_msg[i]).item()
+                    norm_loss = (loss_masked - loss_min) / (loss_max - loss_min)
+                    loss_masked = max(0, min(1, norm_loss))
+                    color = cmap(loss_masked)
+                    
+                    # if attack_counters[selected_attack] == 1 and selected_attack_label == "restart":
+                    #     print(i,src,dst,batch_edge_ids[i],original_msg[i].argmax().item(),edge_text)
+                    
+                    # Full graph
+                    if batch_label[i].item() == 1:
+                        full_node_colors[src] = "red"
+                    else:
+                        full_node_colors[src] = "blue"
+                    full_node_colors[dst] = "black"
 
+                    full_node_labels[src] = list(attack_type_vocab.keys())[batch_attack[i]]
+                    nx_full_graph.add_edge(batch_src_node_ids[i].item(), batch_dst_node_ids[i].item(), label=edge_text, color=color, loss=loss_masked)
+
+                    # Subgraph with selected attack type
+                    if batch_attack[i] == selected_attack:
                         if batch_label[i].item() == 1:
                             node_colors[src] = "red"
                         else:
                             node_colors[src] = "blue"
                         node_colors[dst] = "black"
-
-                        node_labels[src] = selected_attack_label
-
-                    nx_graph.add_edge(batch_src_node_ids[i].item(), batch_dst_node_ids[i].item(), label=edge_text, color=color, loss=loss_masked)
+                        node_labels[src] = list(attack_type_vocab.keys())[batch_attack[i]] 
+                        
+                        nx_graph.add_edge(batch_src_node_ids[i].item(), batch_dst_node_ids[i].item(), label=edge_text, color=color, loss=loss_masked)
+                    
+                local_embeddings.append(event_embedding[i].cpu().numpy())
+                local_labels.append(edge_text)
+                local_procedures.append(batch_attack[i])
 
                 loss = loss_func(event_embedding[i], original_msg[i]).item()
                 evaluate_losses.append(loss)
                 evaluate_embeddings.append(event_embedding[i])
                 
-            save_dir = f'./figures/{model_name}/{selected_attack_label}_{attack_counters[selected_attack]}.png'
+            save_dir = f'./figures/{model_name}'
             os.makedirs(f'./figures/{model_name}', exist_ok=True)
 
             evaluate_idx_data_loader_tqdm.set_description(f'evaluate for the {batch_idx + 1}-th batch, evaluate loss: {loss}, {len(attack_counters)}/{len(attack_type_vocab)} attack types')
             
             if attack_counters[selected_attack] < 3:
-                plot_graph_with_loss(nx_graph, node_colors, node_labels, save_dir)
+                plot_graph_with_loss(nx_graph, node_colors, node_labels, save_dir + f'/{selected_attack_label}_{attack_counters[selected_attack]}.png')
+                plot_graph_with_loss(nx_full_graph, node_colors, node_labels, save_dir + f'/{selected_attack_label}_{attack_counters[selected_attack]}_full.png')
+                #pca_loss(local_embeddings, local_labels, local_procedures, save_dir.replace('.png', '_pca.png'))
             
-            if sum(attack_counters.values()) >= 2*len(attack_type_vocab):
-                break
+            # if sum(attack_counters.values()) >= 2*len(attack_type_vocab):
+            #     break
 
 
     os.makedirs('./losses', exist_ok=True)

@@ -46,7 +46,7 @@ def preprocess(dataset_name: str):
             ts_list.append(ts)
             label_list.append(label)
             # edge index
-            idx_list.append(idx)
+            idx_list.append(idx+1)
 
             feat = F.one_hot(torch.tensor(int(e[4])), num_classes=len(feature_vocab)).float()
             feat_l.append(feat)
@@ -114,9 +114,9 @@ def preprocess_data(dataset_name: str, bipartite: bool = True, node_feat_dim: in
     new_df = df.copy()  # we have 2 df now and discriminating the source and target node by unique ids dont seem necessary
 
     # edge feature for zero index, which is not used (since edge id starts from 1)
-    # empty = np.zeros(edge_feats.shape[1])[np.newaxis, :]
+    empty = np.zeros(edge_feats.shape[1])[np.newaxis, :]
     # Stack arrays in sequence vertically(row wise),
-    # edge_feats = np.vstack([empty, edge_feats])
+    edge_feats = np.vstack([empty, edge_feats])
 
     # node features with one additional feature for zero index (since node id starts from 1)
     max_idx = max(new_df.u.max(), new_df.i.max())
