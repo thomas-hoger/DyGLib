@@ -28,7 +28,7 @@ feature_vocab = {'http2.path': 0, 'pfcp.seid': 1, 'pfcp.f_teid.teid': 2, 'gtp.ex
 attack_type_vocab = {'user_traffic': 0, 'modify_drop': 1, 'flood_etablishment': 2, 'applicative_scan': 3, 'seid_fuzzing': 4, 'pfcp_in_gtp': 5, 'uplink_wake_random_u': 6, 'set_random_ue_idle': 7, 'cn_mitm': 8, 'add_random_nf': 9, 'remove_random_nf': 10, 'flood_deletion': 11, 'uplink_spoofing': 12, 'fuzz': 13, 'downlink_wake_random': 14, 'modify_dupl': 15, 'deregister_random_ue': 16, 'register_random_ue': 17, 'restart': 18, 'unknown': 19}
 
 loss_min = 0
-loss_max = 0.9
+loss_max = 0.65
 
 def plot_graph_with_loss(nx_graph, node_colors, node_labels, save_dir):
     pos = nx.spring_layout(nx_graph, seed=42)
@@ -282,15 +282,15 @@ def evaluate_model_reconstruction(model_name: str, model: nn.Module, neighbor_sa
                 plot_graph_with_loss(nx_full_graph, full_node_colors, full_node_labels, save_dir + f'/{selected_attack_label}_{attack_counters[selected_attack]}_full.png')
                 #pca_loss(local_embeddings, local_labels, local_procedures, save_dir.replace('.png', '_pca.png'))
             
-            # if sum(attack_counters.values()) >= 2*len(attack_type_vocab):
-            #     break
+            if sum(attack_counters.values()) >= 2*len(attack_type_vocab):
+                break
 
 
-    os.makedirs('./losses', exist_ok=True)
-    np.save(f'./losses/{model_name}.npy', np.array(evaluate_losses))
+    # os.makedirs('./losses', exist_ok=True)
+    # np.save(f'./losses/{model_name}.npy', np.array(evaluate_losses))
         
-    os.makedirs('./embeddings', exist_ok=True)
-    np.save(f'./embeddings/{model_name}.npy', np.array(evaluate_embeddings)) 
+    # os.makedirs('./embeddings', exist_ok=True)
+    # np.save(f'./embeddings/{model_name}.npy', np.array(evaluate_embeddings)) 
       
     return evaluate_losses, evaluate_metrics
 

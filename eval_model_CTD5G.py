@@ -134,9 +134,10 @@ if __name__ == "__main__":
         # training, only use training graph
         model[0].set_neighbor_sampler(test_neighbor_sampler)
         
-    model.load_state_dict(torch.load(save_model_folder + "model_2.pkl", map_location='cpu'))
+    version = 2
+    model.load_state_dict(torch.load(save_model_folder + f"model_{version}.pkl", map_location='cpu'))
     if args.model_name in ['JODIE', 'DyRep', 'TGN']:
-        model[0].memory_bank.node_raw_messages = torch.load(save_model_folder + "nonparametric_2.pkl", map_location='cpu', weights_only=False)
+        model[0].memory_bank.node_raw_messages = torch.load(save_model_folder + f"nonparametric_{version}.pkl", map_location='cpu', weights_only=False)
 
     test_losses, test_metrics = evaluate_model_reconstruction(
         model_name=args.model_name,
