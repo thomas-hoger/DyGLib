@@ -38,13 +38,13 @@ if __name__ == "__main__":
 
     # initialize training neighbor sampler to retrieve temporal graph
     train_neighbor_sampler = get_neighbor_sampler(data=train_data, sample_neighbor_strategy=args.sample_neighbor_strategy,
-                                                  time_scaling_factor=args.time_scaling_factor, seed=0)
+                                                  time_scaling_factor=args.time_scaling_factor, seed=1)
 
     # initialize negative samplers, set seeds for validation and testing so negatives are the same across different runs
     # in the inductive setting, negatives are sampled only amongst other new nodes
     # train negative edge sampler does not need to specify the seed, but evaluation samplers need to do so
-    train_neg_edge_sampler = NegativeEdgeSampler(src_node_ids=train_data.src_node_ids, dst_node_ids=train_data.dst_node_ids, negative_sample_strategy="historical")
-
+    train_neg_edge_sampler = NegativeEdgeSampler(src_node_ids=train_data.src_node_ids, dst_node_ids=train_data.dst_node_ids, negative_sample_strategy="simple_inductive", seed=1)
+    
     # get data loaders
     train_idx_data_loader = get_idx_data_loader(indices_list=list(range(len(train_data.src_node_ids))), batch_size=args.batch_size, shuffle=False)
 
@@ -149,14 +149,16 @@ if __name__ == "__main__":
                 
                 batch_src_node_ids, batch_dst_node_ids, batch_node_interact_times, batch_edge_ids, batch_node_pids = \
                     train_data.src_node_ids[train_data_indices], train_data.dst_node_ids[train_data_indices], \
-                    train_data.node_interact_times[train_data_indices], train_data.edge_ids[train_data_indices]
+                    train_data.node_interact_times[train_data_indices], train_data.edge_ids[train_data_indices], train_data.packet_id[train_data_indices]
 
-                batch_neg_src_node_ids, batch_neg_dst_node_ids = train_neg_edge_sampler.sample(size=len(batch_src_node_ids))
-                mapping = {src: i for i, src in enumerate(batch_neg_src_node_ids)}
-                indices = np.array([mapping[s] for s in batch_src_node_ids])
-
-                batch_neg_src_node_ids = batch_neg_src_node_ids[indices]
-                batch_neg_dst_node_ids = batch_neg_dst_node_ids[indices]
+                batch_neg_src_node_ids, batch_neg_dst_node_ids = train_neg_edge_sampler.sample(
+                    size=len(batch_src_node_ids),
+                    batch_src_node_ids=batch_src_node_ids,
+                    batch_dst_node_ids=batch_dst_node_ids
+                )
+                
+                batch_neg_pids = [dict(zip(batch_src_node_ids, batch_node_pids))[n] for n in batch_neg_src_node_ids]
+                batch_neg_time = [dict(zip(batch_src_node_ids, batch_node_interact_times))[n] for n in batch_neg_src_node_ids]
 
                 # we need to compute for positive and negative edges respectively, because the new sampling strategy (for evaluation) allows the negative source nodes to be
                 # different from the source nodes, this is different from previous works that just replace destination nodes with negative destination nodes
@@ -175,8 +177,8 @@ if __name__ == "__main__":
                     batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
                         model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
                                                                           dst_node_ids=batch_neg_dst_node_ids,
-                                                                          node_interact_times=batch_node_interact_times,
-                                                                          node_pids=batch_node_pids,
+                                                                          node_interact_times=batch_neg_time,
+                                                                          node_pids=batch_neg_pids,
                                                                           num_neighbors=args.num_neighbors)
                 elif args.model_name in ['JODIE', 'DyRep', 'TGN']:
                     # note that negative nodes do not change the memories while the positive nodes change the memories,
@@ -186,8 +188,8 @@ if __name__ == "__main__":
                     batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
                         model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
                                                                           dst_node_ids=batch_neg_dst_node_ids,
-                                                                          node_interact_times=batch_node_interact_times,
-                                                                          node_pids=batch_node_pids,
+                                                                          node_interact_times=batch_neg_time,
+                                                                          node_pids=batch_neg_pids,
                                                                           edge_ids=None,
                                                                           edges_are_positive=False,
                                                                           num_neighbors=args.num_neighbors)
@@ -218,8 +220,8 @@ if __name__ == "__main__":
                     batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
                         model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
                                                                           dst_node_ids=batch_neg_dst_node_ids,
-                                                                          node_interact_times=batch_node_interact_times,
-                                                                          node_pids=batch_node_pids,
+                                                                          node_interact_times=batch_neg_time,
+                                                                          node_pids=batch_neg_pids,
                                                                           num_neighbors=args.num_neighbors,
                                                                           time_gap=args.time_gap)
                 elif args.model_name in ['DyGFormer']:
@@ -236,8 +238,8 @@ if __name__ == "__main__":
                     batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
                         model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
                                                                           dst_node_ids=batch_neg_dst_node_ids,
-                                                                          node_interact_times=batch_node_interact_times,
-                                                                          node_pids=batch_node_pids)
+                                                                          node_interact_times=batch_neg_time,
+                                                                          node_pids=batch_neg_pids)
                 else:
                     raise ValueError(f"Wrong value for model_name {args.model_name}!")
                 # get positive and negative probabilities, shape (batch_size, )

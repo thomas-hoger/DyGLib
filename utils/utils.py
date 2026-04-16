@@ -359,7 +359,7 @@ class NegativeEdgeSampler(object):
         self.earliest_time = min(self.unique_interact_times)
         self.last_observed_time = last_observed_time
 
-        if self.negative_sample_strategy != 'random':
+        if self.negative_sample_strategy != 'random' and self.negative_sample_strategy != 'simple_inductive':
             # all the possible edges that connect source nodes in self.unique_src_node_ids with destination nodes in self.unique_dst_node_ids
             self.possible_edges = set((src_node_id, dst_node_id) for src_node_id in self.unique_src_node_ids for dst_node_id in self.unique_dst_node_ids)
 
@@ -404,6 +404,11 @@ class NegativeEdgeSampler(object):
                                                                                  batch_dst_node_ids=batch_dst_node_ids,
                                                                                  current_batch_start_time=current_batch_start_time,
                                                                                  current_batch_end_time=current_batch_end_time)
+        elif self.negative_sample_strategy == 'simple_inductive':
+            negative_src_node_ids, negative_dst_node_ids = self.simple_inductive_sample(size=size, batch_src_node_ids=batch_src_node_ids,
+                                                                                        batch_dst_node_ids=batch_dst_node_ids,
+                                                                                        current_batch_start_time=current_batch_start_time,
+                                                                                        current_batch_end_time=current_batch_end_time)
         else:
             raise ValueError(f'Not implemented error for negative_sample_strategy {self.negative_sample_strategy}!')
         return negative_src_node_ids, negative_dst_node_ids
@@ -519,6 +524,47 @@ class NegativeEdgeSampler(object):
         # Note that if one of the input of np.concatenate is empty, the output will be composed of floats.
         # Hence, convert the type to long to guarantee valid index
         return negative_src_node_ids.astype(np.longlong), negative_dst_node_ids.astype(np.longlong)
+    
+    def simple_inductive_sample(self, size: int, batch_src_node_ids: np.ndarray, batch_dst_node_ids: np.ndarray,
+                                current_batch_start_time: float, current_batch_end_time: float):
+        """
+        inductive sampling strategy, first randomly samples among inductive edges that are not in self.observed_edges and the current batch,
+        if number of inductive edges is smaller than size, then fill in remaining edges with randomly sampled edges
+        :param size: int, number of sampled negative edges
+        :param batch_src_node_ids: ndarray, shape (batch_size, ), source node ids in the current batch
+        :param batch_dst_node_ids: ndarray, shape (batch_size, ), destination node ids in the current batch
+        :param current_batch_start_time: float, start time in the current batch
+        :param current_batch_end_time: float, end time in the current batch
+        :return:
+        """
+        assert self.seed is not None
+        
+        batch_possible_edges = set((src_node_id, dst_node_id) for src_node_id in batch_src_node_ids for dst_node_id in batch_dst_node_ids)
+        current_batch_edges =  set((src_node_id, dst_node_id) for src_node_id, dst_node_id in zip(batch_src_node_ids, batch_dst_node_ids))
+        
+        unique_inductive_edges = batch_possible_edges - current_batch_edges
+        unique_inductive_edges_src_node_ids = np.array([edge[0] for edge in unique_inductive_edges])
+        unique_inductive_edges_dst_node_ids = np.array([edge[1] for edge in unique_inductive_edges])
+
+        # if sample size is larger than number of unique inductive edges, then fill in remaining edges with randomly sampled edges
+        if size > len(unique_inductive_edges):
+            raise ValueError("Not supposed to happen")
+            num_random_sample_edges = size - len(unique_inductive_edges)
+            random_sample_src_node_ids, random_sample_dst_node_ids = self.random_sample_with_collision_check(size=num_random_sample_edges,
+                                                                                                             batch_src_node_ids=batch_src_node_ids,
+                                                                                                             batch_dst_node_ids=batch_dst_node_ids)
+
+            negative_src_node_ids = np.concatenate([random_sample_src_node_ids, unique_inductive_edges_src_node_ids])
+            negative_dst_node_ids = np.concatenate([random_sample_dst_node_ids, unique_inductive_edges_dst_node_ids])
+        else:
+            inductive_sample_edge_node_indices = self.random_state.choice(len(unique_inductive_edges), size=size, replace=False)
+            negative_src_node_ids = unique_inductive_edges_src_node_ids[inductive_sample_edge_node_indices]
+            negative_dst_node_ids = unique_inductive_edges_dst_node_ids[inductive_sample_edge_node_indices]
+
+        # Note that if one of the input of np.concatenate is empty, the output will be composed of floats.
+        # Hence, convert the type to long to guarantee valid index
+        return negative_src_node_ids.astype(np.longlong), negative_dst_node_ids.astype(np.longlong)
+
 
     def reset_random_state(self):
         """
