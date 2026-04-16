@@ -157,8 +157,8 @@ if __name__ == "__main__":
                     batch_dst_node_ids=batch_dst_node_ids
                 )
                 
-                batch_neg_pids = [dict(zip(batch_src_node_ids, batch_node_pids))[n] for n in batch_neg_src_node_ids]
-                batch_neg_time = [dict(zip(batch_src_node_ids, batch_node_interact_times))[n] for n in batch_neg_src_node_ids]
+                batch_neg_pids = np.array([dict(zip(batch_src_node_ids, batch_node_pids))[n] for n in batch_neg_src_node_ids])
+                batch_neg_time = np.array([dict(zip(batch_src_node_ids, batch_node_interact_times))[n] for n in batch_neg_src_node_ids])
 
                 # we need to compute for positive and negative edges respectively, because the new sampling strategy (for evaluation) allows the negative source nodes to be
                 # different from the source nodes, this is different from previous works that just replace destination nodes with negative destination nodes
