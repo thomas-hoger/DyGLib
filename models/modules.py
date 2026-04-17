@@ -117,8 +117,8 @@ class MultiHeadAttention(nn.Module):
         self.time_feat_dim = time_feat_dim
         self.num_heads = num_heads
 
-        self.query_dim = node_feat_dim + time_feat_dim
-        self.key_dim = node_feat_dim + edge_feat_dim + time_feat_dim
+        self.query_dim = node_feat_dim 
+        self.key_dim = node_feat_dim + edge_feat_dim 
 
         assert self.query_dim % num_heads == 0, "The sum of node_feat_dim and time_feat_dim should be divided by num_heads!"
 
@@ -152,12 +152,12 @@ class MultiHeadAttention(nn.Module):
         node_features = torch.unsqueeze(node_features, dim=1)
 
         # Tensor, shape (batch_size, 1, node_feat_dim + time_feat_dim)
-        query = residual = torch.cat([node_features, node_time_features], dim=2)
+        query = residual = node_features
         # shape (batch_size, 1, num_heads, self.head_dim)
         query = self.query_projection(query).reshape(query.shape[0], query.shape[1], self.num_heads, self.head_dim)
 
         # Tensor, shape (batch_size, num_neighbors, node_feat_dim + edge_feat_dim + time_feat_dim)
-        key = value = torch.cat([neighbor_node_features, neighbor_node_edge_features, neighbor_node_time_features], dim=2)
+        key = value = torch.cat([neighbor_node_features, neighbor_node_edge_features], dim=2)
         # Tensor, shape (batch_size, num_neighbors, num_heads, self.head_dim)
         key = self.key_projection(key).reshape(key.shape[0], key.shape[1], self.num_heads, self.head_dim)
         # Tensor, shape (batch_size, num_neighbors, num_heads, self.head_dim)
