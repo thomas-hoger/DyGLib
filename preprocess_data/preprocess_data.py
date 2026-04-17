@@ -166,7 +166,7 @@ def check_data(dataset_name: str):
 parser = argparse.ArgumentParser('Interface for preprocessing datasets')
 parser.add_argument('--dataset_name', type=str,
                     choices=['wikipedia', 'reddit', 'mooc', 'lastfm', 'myket', 'enron', 'SocialEvo', 'uci',
-                             'Flights', 'CanParl', 'USLegis', 'UNtrade', 'UNvote', 'Contacts', "CTD5G", "CTD5G_test"],
+                             'Flights', 'CanParl', 'USLegis', 'UNtrade', 'UNvote', 'Contacts', "CTD5G", "CTD5G_test", "new_CTD5G", "new_CTD5G_test"],
                     help='Dataset name', default='CTD5G')
 
 node_feat_dim_default = len(feature_vocab)
