@@ -146,9 +146,9 @@ class NeighborSampler:
         # return 0 for the first position in self.nodes_neighbor_times since the value at the first position is empty
         
         if max_pid :  
-            i = np.searchsorted(self.nodes_neighbor_times[node_id], interact_time, side='right')
-        else : 
             i = np.searchsorted(self.edge_pids[node_id], max_pid, side='right')
+        else : 
+            i = np.searchsorted(self.nodes_neighbor_times[node_id], interact_time, side='right')
 
         if return_sampled_probabilities:
             return self.nodes_neighbor_ids[node_id][:i], self.nodes_edge_ids[node_id][:i], self.nodes_neighbor_times[node_id][:i], \
