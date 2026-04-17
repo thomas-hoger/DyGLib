@@ -381,6 +381,18 @@ class NegativeEdgeSampler(object):
         # return the unique select source and destination nodes in the selected time interval
         return set((src_node_id, dst_node_id) for src_node_id, dst_node_id in zip(self.src_node_ids[selected_time_interval], self.dst_node_ids[selected_time_interval]))
 
+    def get_dst_between_start_end_time(self, start_time: float, end_time: float):
+        """
+        get unique edges happened between start and end time
+        :param start_time: float, start timestamp
+        :param end_time: float, end timestamp
+        :return: a set of edges, where each edge is a tuple of (src_node_id, dst_node_id)
+        """
+        selected_time_interval = np.logical_and(self.interact_times >= start_time, self.interact_times <= end_time)
+        # return the unique select source and destination nodes in the selected time interval
+        return [dst_node_id for dst_node_id in self.dst_node_ids[selected_time_interval]]
+
+
     def sample(self, size: int, batch_src_node_ids: np.ndarray = None, batch_dst_node_ids: np.ndarray = None,
                current_batch_start_time: float = 0.0, current_batch_end_time: float = 0.0):
         """
@@ -539,7 +551,9 @@ class NegativeEdgeSampler(object):
         """
         assert self.seed is not None
         
-        batch_possible_edges = set((src_node_id, dst_node_id) for src_node_id in batch_src_node_ids for dst_node_id in batch_dst_node_ids)
+        historic_dst_node_ids = self.get_dst_between_start_end_time(start_time=self.earliest_time, end_time=current_batch_end_time)
+        
+        batch_possible_edges = set((src_node_id, dst_node_id) for src_node_id in batch_src_node_ids for dst_node_id in historic_dst_node_ids)
         current_batch_edges =  set((src_node_id, dst_node_id) for src_node_id, dst_node_id in zip(batch_src_node_ids, batch_dst_node_ids))
         
         unique_inductive_edges = batch_possible_edges - current_batch_edges
