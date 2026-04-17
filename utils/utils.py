@@ -388,6 +388,7 @@ class NegativeEdgeSampler(object):
         :param end_time: float, end timestamp
         :return: a set of edges, where each edge is a tuple of (src_node_id, dst_node_id)
         """
+                
         selected_time_interval = np.logical_and(self.interact_times >= start_time, self.interact_times <= end_time)
         # return the unique select source and destination nodes in the selected time interval
         return [dst_node_id for dst_node_id in self.dst_node_ids[selected_time_interval]]

@@ -43,7 +43,7 @@ if __name__ == "__main__":
     # initialize negative samplers, set seeds for validation and testing so negatives are the same across different runs
     # in the inductive setting, negatives are sampled only amongst other new nodes
     # train negative edge sampler does not need to specify the seed, but evaluation samplers need to do so
-    train_neg_edge_sampler = NegativeEdgeSampler(src_node_ids=train_data.src_node_ids, dst_node_ids=train_data.dst_node_ids, negative_sample_strategy="simple_inductive", seed=1)
+    train_neg_edge_sampler = NegativeEdgeSampler(src_node_ids=train_data.src_node_ids, dst_node_ids=train_data.dst_node_ids, interact_times=train_data.node_interact_times, negative_sample_strategy="simple_inductive", seed=1)
     
     # get data loaders
     train_idx_data_loader = get_idx_data_loader(indices_list=list(range(len(train_data.src_node_ids))), batch_size=args.batch_size, shuffle=False)
@@ -150,7 +150,9 @@ if __name__ == "__main__":
                 batch_neg_src_node_ids, batch_neg_dst_node_ids = train_neg_edge_sampler.sample(
                     size=len(batch_src_node_ids),
                     batch_src_node_ids=batch_src_node_ids,
-                    batch_dst_node_ids=batch_dst_node_ids
+                    batch_dst_node_ids=batch_dst_node_ids,
+                    current_batch_start_time=min(batch_node_interact_times),
+                    current_batch_end_time=max(batch_node_interact_times)
                 )
                 
                 batch_neg_pids = np.array([dict(zip(batch_src_node_ids, batch_node_pids))[n] for n in batch_neg_src_node_ids])

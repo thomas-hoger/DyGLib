@@ -89,8 +89,8 @@ def get_reconstruction_data(dataset_name: str, val_ratio: float, test_ratio: flo
     node_raw_features = np.concatenate([node_raw_features, node_raw_features_test], axis=0)
 
     # Train 
-    src_node_ids = graph_df.i.values.astype(np.longlong)
-    dst_node_ids = graph_df.u.values.astype(np.longlong)
+    src_node_ids = graph_df.u.values.astype(np.longlong)
+    dst_node_ids = graph_df.i.values.astype(np.longlong)
     node_interact_times = graph_df.ts.values.astype(np.float64)
     edge_ids = graph_df.idx.values.astype(np.longlong)
     labels = graph_df.label.values
