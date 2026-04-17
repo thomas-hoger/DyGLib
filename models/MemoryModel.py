@@ -52,7 +52,7 @@ class MemoryModel(torch.nn.Module):
         self.memory_dim = self.node_feat_dim
         # since models use the identity function for message encoding, message dimension is 2 * memory_dim + time_feat_dim + edge_feat_dim
         self.message_dim = self.memory_dim + self.memory_dim + self.edge_feat_dim
-
+        
         self.time_encoder = TimeEncoder(time_dim=time_feat_dim)
 
         # message module (models use the identity function for message encoding, hence, we only create MessageAggregator)
@@ -99,7 +99,7 @@ class MemoryModel(torch.nn.Module):
         """
         # Tensor, shape (2 * batch_size, )
         node_ids = np.concatenate([src_node_ids, dst_node_ids])
-
+        
         # we need to use self.get_updated_memory instead of self.update_memory based on positive_node_ids directly,
         # because the graph attention embedding module in TGN needs to additionally access memory of neighbors.
         # so we return all nodes' memory with shape (num_nodes, ) by using self.get_updated_memory
@@ -132,6 +132,7 @@ class MemoryModel(torch.nn.Module):
                                                                                                                node_pids]),
                                                                                      current_layer_num=self.num_layers,
                                                                                      num_neighbors=num_neighbors)
+            print("WWW",node_embeddings.shape)
         else:
             raise ValueError(f'Not implemented error for model_name {self.model_name}!')
 
@@ -158,6 +159,8 @@ class MemoryModel(torch.nn.Module):
                                                                                                 node_interact_times=node_interact_times,
                                                                                                 edge_ids=edge_ids)
 
+            print("GGG", new_src_node_raw_messages.shape)
+
             # store new raw messages for source and destination nodes
             self.memory_bank.store_node_raw_messages(node_ids=unique_src_node_ids, new_node_raw_messages=new_src_node_raw_messages)
             self.memory_bank.store_node_raw_messages(node_ids=unique_dst_node_ids, new_node_raw_messages=new_dst_node_raw_messages)
@@ -183,6 +186,8 @@ class MemoryModel(torch.nn.Module):
         # unique_node_timestamps, ndarray, shape (num_unique_node_ids, ), array of timestamps for unique nodes
         unique_node_ids, unique_node_messages, unique_node_timestamps = self.message_aggregator.aggregate_messages(node_ids=node_ids,
                                                                                                                    node_raw_messages=node_raw_messages)
+                
+        print("EEE",unique_node_messages.shape)
         # get updated memory for all nodes with messages stored in previous batches (just for computation)
         # updated_node_memories, Tensor, shape (num_nodes, memory_dim)
         # updated_node_last_updated_times, Tensor, shape (num_nodes, )
@@ -479,6 +484,7 @@ class MemoryUpdater(nn.Module):
 
         # Tensor, shape (num_nodes, memory_dim)
         updated_node_memories = self.memory_bank.node_memories.data.clone()
+        print("DDD", unique_node_messages.shape)
         updated_node_memories[torch.from_numpy(unique_node_ids)] = self.memory_updater(unique_node_messages,
                                                                                        updated_node_memories[torch.from_numpy(unique_node_ids)])
 
@@ -515,7 +521,7 @@ class RNNMemoryUpdater(MemoryUpdater):
         super(RNNMemoryUpdater, self).__init__(memory_bank)
 
         self.memory_updater = nn.RNNCell(input_size=message_dim, hidden_size=memory_dim)
-
+    
 
 # Embedding-related Modules
 class TimeProjectionEmbedding(nn.Module):
