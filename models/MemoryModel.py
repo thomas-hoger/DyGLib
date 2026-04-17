@@ -132,7 +132,6 @@ class MemoryModel(torch.nn.Module):
                                                                                                                node_pids]),
                                                                                      current_layer_num=self.num_layers,
                                                                                      num_neighbors=num_neighbors)
-            print("WWW",node_embeddings.shape)
         else:
             raise ValueError(f'Not implemented error for model_name {self.model_name}!')
 
@@ -158,8 +157,6 @@ class MemoryModel(torch.nn.Module):
                                                                                                 dst_node_embeddings=src_node_embeddings,
                                                                                                 node_interact_times=node_interact_times,
                                                                                                 edge_ids=edge_ids)
-
-            print("GGG", new_src_node_raw_messages.shape)
 
             # store new raw messages for source and destination nodes
             self.memory_bank.store_node_raw_messages(node_ids=unique_src_node_ids, new_node_raw_messages=new_src_node_raw_messages)
@@ -187,7 +184,6 @@ class MemoryModel(torch.nn.Module):
         unique_node_ids, unique_node_messages, unique_node_timestamps = self.message_aggregator.aggregate_messages(node_ids=node_ids,
                                                                                                                    node_raw_messages=node_raw_messages)
                 
-        print("EEE",unique_node_messages.shape)
         # get updated memory for all nodes with messages stored in previous batches (just for computation)
         # updated_node_memories, Tensor, shape (num_nodes, memory_dim)
         # updated_node_last_updated_times, Tensor, shape (num_nodes, )
@@ -245,7 +241,7 @@ class MemoryModel(torch.nn.Module):
         edge_features = self.edge_raw_features[torch.from_numpy(edge_ids)]
 
         # Tensor, shape (batch_size, message_dim = memory_dim + memory_dim + time_feat_dim + edge_feat_dim)
-        new_src_node_raw_messages = torch.cat([src_node_memories, dst_node_memories, src_node_delta_time_features, edge_features], dim=1)
+        new_src_node_raw_messages = torch.cat([src_node_memories, dst_node_memories, edge_features], dim=1)
 
         # dictionary of list, {node_id: list of tuples}, each tuple is (message, time) with type (Tensor shape (message_dim, ), a scalar)
         new_node_raw_messages = defaultdict(list)
@@ -484,7 +480,6 @@ class MemoryUpdater(nn.Module):
 
         # Tensor, shape (num_nodes, memory_dim)
         updated_node_memories = self.memory_bank.node_memories.data.clone()
-        print("DDD", unique_node_messages.shape)
         updated_node_memories[torch.from_numpy(unique_node_ids)] = self.memory_updater(unique_node_messages,
                                                                                        updated_node_memories[torch.from_numpy(unique_node_ids)])
 
