@@ -53,7 +53,7 @@ if __name__ == "__main__":
         set_random_seed(seed=run)
 
         args.seed = run
-        args.save_model_name = f'{args.model_name}_seed{args.seed}'
+        args.save_model_name = f'{args.expe_name}_seed{args.seed}'
 
         # set up logger
         logging.basicConfig(level=logging.INFO)
@@ -123,9 +123,6 @@ if __name__ == "__main__":
         save_model_folder = f"./saved_models/{args.model_name}/{args.dataset_name}/{args.save_model_name}/"
         shutil.rmtree(save_model_folder, ignore_errors=True)
         os.makedirs(save_model_folder, exist_ok=True)
-
-        early_stopping = EarlyStopping(patience=args.patience, save_model_folder=save_model_folder,
-                                       save_model_name=args.save_model_name, logger=logger, model_name=args.model_name)
 
         loss_func = nn.BCELoss()
 
