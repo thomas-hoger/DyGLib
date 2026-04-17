@@ -11,6 +11,7 @@ def get_link_prediction_args(is_evaluation: bool = False):
     """
     # arguments
     parser = argparse.ArgumentParser('Interface for the link prediction task')
+    parser.add_argument('--expe_name', type=str, default='default', help='name of the experiment')
     parser.add_argument('--dataset_name', type=str, help='dataset to be used', default='CTD5G',
                         choices=['wikipedia', 'reddit', 'mooc', 'lastfm', 'myket', 'enron', 'SocialEvo', 'uci', 'Flights', 'CanParl', 'USLegis', 'UNtrade', 'UNvote', 'Contacts'])
     parser.add_argument('--batch_size', type=int, default=200, help='batch size')
