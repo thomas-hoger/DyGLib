@@ -4,7 +4,7 @@ saved_models*/*
 old/
 losses/
 embeddings/
-./*.json
+node_label_mapping.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
