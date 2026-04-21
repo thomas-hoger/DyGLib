@@ -22,7 +22,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import networkx as nx
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
 
 
 cmap = plt.cm.RdYlGn_r
@@ -327,8 +327,9 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
         evaluate_losses = []
         evaluate_metrics = []
         
-        all_preds  = []
-        all_labels = []
+        all_preds   = []
+        all_labels  = []
+        all_attacks = []
         
         evaluate_idx_data_loader_tqdm = tqdm(evaluate_idx_data_loader, ncols=120)
         for batch_idx, evaluate_data_indices in enumerate(evaluate_idx_data_loader_tqdm):
@@ -419,6 +420,7 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
             pred_threshold = (prediction > 0.5).int()
             all_preds.append(pred_threshold)
             all_labels.append(torch.tensor(batch_label))
+            all_attacks.append(batch_attack[mask])
 
             for i in range(len(prediction)):
                                 
@@ -471,15 +473,39 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
                 plot_graph_with_loss(nx_full_graph, full_node_colors, full_node_labels, save_dir + f'/{selected_attack_label}_{attack_counters[selected_attack]}_full.png')
                 #pca_loss(local_embeddings, local_labels, local_procedures, save_dir.replace('.png', '_pca.png'))
             
-            if sum(attack_counters.values()) >= 2*len(attack_type_vocab):
-                break
+            # if sum(attack_counters.values()) >= 2*len(attack_type_vocab):
+            #     break
 
     all_preds = torch.cat(all_preds).numpy()
     all_labels = torch.cat(all_labels).numpy()
-    cm = confusion_matrix(all_labels, all_preds)
+    all_attacks = torch.cat(all_attacks).numpy()
+    
+    info_to_export = {
+        "global": {
+            "cm" : confusion_matrix(all_labels, all_preds).to_list(),
+            "accuracy": accuracy_score(all_labels, all_preds),
+            "precision": precision_score(all_labels, all_preds),
+            "recall": recall_score(all_labels, all_preds),
+            "f1_score": f1_score(all_labels, all_preds),
+        }   
+    }
+    
+    for att_type in np.unique(all_attacks):
+        mask   = (all_attacks == att_type)
+        labels = all_labels[mask]
+        preds  = all_preds[mask]
+        
+        attack_name = list(attack_type_vocab.keys())[att_type]
+        info_to_export[attack_name] = {
+            "cm" : confusion_matrix(labels, preds).to_list(),
+            "accuracy": accuracy_score(all_labels, all_preds),
+            "precision": precision_score(all_labels, all_preds),
+            "recall": recall_score(all_labels, all_preds),
+            "f1_score": f1_score(all_labels, all_preds),
+        }
 
-    os.makedirs(f'./losses/{model_name}/{expe_name}', exist_ok=True)
-    json.dump(cm.tolist(), open(f'./losses/{model_name}/{expe_name}/confusion_matrix.json', 'w'))
+    os.makedirs(f'./eval/{model_name}/{expe_name}', exist_ok=True)
+    json.dump(info_to_export, open(f'./eval/{model_name}/{expe_name}/confusion_matrix.json', 'w'))
 
     # os.makedirs('./losses', exist_ok=True)
     # np.save(f'./losses/{model_name}.npy', np.array(evaluate_losses))

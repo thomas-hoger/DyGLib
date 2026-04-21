@@ -277,6 +277,9 @@ if __name__ == "__main__":
             if args.model_name in ['JODIE', 'DyRep', 'TGN']:
                 torch.save(model[0].memory_bank.node_raw_messages, os.path.join(save_model_folder, f"nonparametric_{epoch + 1}.pkl"))
 
+            json.dump(train_metrics, open(os.path.join(save_model_folder, f"train_metrics_{epoch + 1}.json"), 'w'))
+            json.dump(train_losses, open(os.path.join(save_model_folder, f"train_losses_{epoch + 1}.json"), 'w'))
+
         # avoid the overlap of logs
         if run < args.num_runs - 1:
             logger.removeHandler(fh)
