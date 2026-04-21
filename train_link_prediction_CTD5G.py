@@ -24,6 +24,7 @@ from utils.metrics import get_link_prediction_metrics
 from utils.DataLoader import get_idx_data_loader, get_link_prediction_data, get_reconstruction_data
 from utils.EarlyStopping import EarlyStopping
 from utils.load_configs import get_link_prediction_args
+import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
 
@@ -121,8 +122,19 @@ if __name__ == "__main__":
         model = convert_to_gpu(model, device=args.device)
 
         save_model_folder = f"./saved_models/{args.model_name}/{args.dataset_name}/{args.expe_name}/"
-        shutil.rmtree(save_model_folder, ignore_errors=True)
         os.makedirs(save_model_folder, exist_ok=True)
+        
+        # Possibly use saved backup
+        version = -1 
+        for filename in os.listdir(save_model_folder):
+            split = filename.split(".")
+            if split[1] == ".pkl" :   
+                version = max(version, int(split[0][-1]))
+        
+        if version > -1:
+            model.load_state_dict(torch.load(save_model_folder + f"model_{version}.pkl", map_location='cpu'))
+            if args.model_name in ['JODIE', 'DyRep', 'TGN']:
+                model[0].memory_bank.node_raw_messages = torch.load(save_model_folder + f"nonparametric_{version}.pkl", map_location='cpu', weights_only=False)
 
         loss_func = nn.BCELoss()
 
@@ -279,6 +291,14 @@ if __name__ == "__main__":
 
             json.dump(train_metrics, open(os.path.join(save_model_folder, f"train_metrics_{epoch + 1}.json"), 'w'))
             json.dump(train_losses, open(os.path.join(save_model_folder, f"train_losses_{epoch + 1}.json"), 'w'))
+            
+            plt.figure()
+            plt.plot(train_losses)
+            plt.xlabel("Batch")
+            plt.ylabel("Loss")
+            plt.grid()
+
+            plt.save(os.path.join(save_model_folder, f"train_losses_{epoch + 1}.png"))
 
         # avoid the overlap of logs
         if run < args.num_runs - 1:
