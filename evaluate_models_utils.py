@@ -381,20 +381,25 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
                                                                       node_pids=batch_packet_id)
             else:
                 raise ValueError(f"Wrong value for model_name {model_name}!")
-            
+                        
+            stop_attack_counter = 5
+                        
             selected_attack = None
             for att_type in np.unique(batch_attack):
                 
                 if att_type not in attack_counters:
                     attack_counters[att_type] = 0
                 
-                if attack_counters[att_type] < 3:
+                if attack_counters[att_type] < stop_attack_counter:
                     attack_counters[att_type] += 1
                     selected_attack = att_type
                     break 
                
+            if sum(attack_counters.values()) >= stop_attack_counter*len(attack_type_vocab):
+                break
+               
             if not selected_attack:
-                continue 
+                continue
 
             nx_graph = nx.Graph()
             nx_full_graph = nx.Graph()
@@ -420,7 +425,7 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
             pred_threshold = (prediction > 0.5).int()
             all_preds.append(pred_threshold)
             all_labels.append(torch.tensor(batch_label))
-            all_attacks.append(batch_attack[mask])
+            all_attacks.append(torch.tensor(batch_attack[mask]))
 
             for i in range(len(prediction)):
                                 
@@ -472,9 +477,6 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
                 plot_graph_with_loss(nx_graph, node_colors, node_labels, save_dir + f'/{selected_attack_label}_{attack_counters[selected_attack]}.png')
                 plot_graph_with_loss(nx_full_graph, full_node_colors, full_node_labels, save_dir + f'/{selected_attack_label}_{attack_counters[selected_attack]}_full.png')
                 #pca_loss(local_embeddings, local_labels, local_procedures, save_dir.replace('.png', '_pca.png'))
-            
-            # if sum(attack_counters.values()) >= 2*len(attack_type_vocab):
-            #     break
 
     all_preds = torch.cat(all_preds).numpy()
     all_labels = torch.cat(all_labels).numpy()
@@ -482,7 +484,7 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
     
     info_to_export = {
         "global": {
-            "cm" : confusion_matrix(all_labels, all_preds).to_list(),
+            "cm" : confusion_matrix(all_labels, all_preds).tolist(),
             "accuracy": accuracy_score(all_labels, all_preds),
             "precision": precision_score(all_labels, all_preds),
             "recall": recall_score(all_labels, all_preds),
@@ -497,7 +499,7 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
         
         attack_name = list(attack_type_vocab.keys())[att_type]
         info_to_export[attack_name] = {
-            "cm" : confusion_matrix(labels, preds).to_list(),
+            "cm" : confusion_matrix(labels, preds).tolist(),
             "accuracy": accuracy_score(all_labels, all_preds),
             "precision": precision_score(all_labels, all_preds),
             "recall": recall_score(all_labels, all_preds),

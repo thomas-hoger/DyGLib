@@ -141,7 +141,7 @@ if __name__ == "__main__":
     if args.model_name in ['JODIE', 'DyRep', 'TGN']:
         model[0].memory_bank.node_raw_messages = torch.load(save_model_folder + f"nonparametric_{version}.pkl", map_location='cpu', weights_only=False)
 
-    test_losses, test_metrics = evaluate_model_link_prediction(
+    evaluate_model_link_prediction(
         model_name=args.model_name,
         expe_name=args.expe_name,
         model=model,
