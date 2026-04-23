@@ -125,13 +125,14 @@ if __name__ == "__main__":
         os.makedirs(save_model_folder, exist_ok=True)
         
         # Possibly use saved backup
-        version = -1 
+        version = 0
         for filename in os.listdir(save_model_folder):
             split = filename.split(".")
             if split[1] == ".pkl" :   
                 version = max(version, int(split[0][-1]))
         
-        if version > -1:
+        if version > 0:
+            print(f"Version {version} found, loading previous save")
             model.load_state_dict(torch.load(save_model_folder + f"model_{version}.pkl", map_location='cpu'))
             if args.model_name in ['JODIE', 'DyRep', 'TGN']:
                 model[0].memory_bank.node_raw_messages = torch.load(save_model_folder + f"nonparametric_{version}.pkl", map_location='cpu', weights_only=False)
@@ -139,6 +140,8 @@ if __name__ == "__main__":
         loss_func = nn.BCELoss()
 
         for epoch in range(args.num_epochs):
+            
+            epoch += version
 
             model.train()
             if args.model_name in ['DyRep', 'TGAT', 'TGN', 'CAWN', 'TCL', 'GraphMixer', 'DyGFormer']:
@@ -285,7 +288,7 @@ if __name__ == "__main__":
             logger.info(f'Epoch: {epoch + 1}, learning rate: {optimizer.param_groups[0]["lr"]}, train loss: {np.mean(train_losses):.4f}')
 
             # Save model            
-            torch.save(model.state_dict(), os.path.join(save_model_folder, f"model_{epoch + 1}.pkl"))
+            torch.save(model.state_dict(), os.path.join(save_model_folder, f"model_{epoch + version + 1}.pkl"))
             if args.model_name in ['JODIE', 'DyRep', 'TGN']:
                 torch.save(model[0].memory_bank.node_raw_messages, os.path.join(save_model_folder, f"nonparametric_{epoch + 1}.pkl"))
 

@@ -500,10 +500,10 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
         attack_name = list(attack_type_vocab.keys())[att_type]
         info_to_export[attack_name] = {
             "cm" : confusion_matrix(labels, preds).tolist(),
-            "accuracy": accuracy_score(all_labels, all_preds),
-            "precision": precision_score(all_labels, all_preds),
-            "recall": recall_score(all_labels, all_preds),
-            "f1_score": f1_score(all_labels, all_preds),
+            "accuracy": accuracy_score(labels, preds),
+            "precision": precision_score(labels, preds),
+            "recall": recall_score(labels, preds),
+            "f1_score": f1_score(labels, preds),
         }
 
     os.makedirs(f'./eval/{model_name}/{expe_name}', exist_ok=True)
