@@ -223,7 +223,7 @@ if __name__ == "__main__":
                 predicts = predicts[mask]
                 batch_labels = batch_labels[mask]
                 
-                loss = loss_func(input=predicts, target=batch_labels) # + 0.3 * accuracy_score(labels, (predicts.detach() > 0.5).int())
+                loss = loss_func(input=predicts, target=torch.Tensor(batch_labels)) # + 0.3 * accuracy_score(labels, (predicts.detach() > 0.5).int())
 
                 train_losses.append(loss.item())
 
