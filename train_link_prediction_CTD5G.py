@@ -301,7 +301,7 @@ if __name__ == "__main__":
             plt.ylabel("Loss")
             plt.grid()
 
-            plt.save(os.path.join(save_model_folder, f"train_losses_{epoch + 1}.png"))
+            plt.savefig(os.path.join(save_model_folder, f"train_losses_{epoch + 1}.png"))
 
         # avoid the overlap of logs
         if run < args.num_runs - 1:
