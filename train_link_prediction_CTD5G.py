@@ -167,7 +167,6 @@ if __name__ == "__main__":
                 batch_src_node_ids, batch_dst_node_ids, batch_node_interact_times, batch_edge_ids, batch_node_pids, batch_labels = \
                     train_data.src_node_ids[train_data_indices], train_data.dst_node_ids[train_data_indices], \
                     train_data.node_interact_times[train_data_indices], train_data.edge_ids[train_data_indices], train_data.packet_id[train_data_indices], train_data.labels[train_data_indices]
-
                 
                 # we need to compute for positive and negative edges respectively, because the new sampling strategy (for evaluation) allows the negative source nodes to be
                 # different from the source nodes, this is different from previous works that just replace destination nodes with negative destination nodes
@@ -219,6 +218,11 @@ if __name__ == "__main__":
                     raise ValueError(f"Wrong value for model_name {args.model_name}!")
                 # get positive and negative probabilities, shape (batch_size, )
                 predicts = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
+                
+                mask = batch_labels != -1
+                predicts = predicts[mask]
+                batch_labels = batch_labels[mask]
+                
                 loss = loss_func(input=predicts, target=batch_labels) # + 0.3 * accuracy_score(labels, (predicts.detach() > 0.5).int())
 
                 train_losses.append(loss.item())
