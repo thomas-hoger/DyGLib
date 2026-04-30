@@ -1,0 +1,277 @@
+{
+    "global": {
+        "cm": [
+            [
+                4,
+                12868
+            ],
+            [
+                5,
+                5526
+            ]
+        ],
+        "accuracy": 0.300494484594903,
+        "precision": 0.30042405132108296,
+        "recall": 0.9990960043391792,
+        "f1_score": 0.4619435736677116
+    },
+    "user_traffic": {
+        "cm": [
+            [
+                0,
+                1005
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "modify_drop": {
+        "cm": [
+            [
+                72
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+    },
+    "flood_etablishment": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                5,
+                1402
+            ]
+        ],
+        "accuracy": 0.9964463397299218,
+        "precision": 1.0,
+        "recall": 0.9964463397299218,
+        "f1_score": 0.9982200071199715
+    },
+    "applicative_scan": {
+        "cm": [
+            [
+                463
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+    },
+    "seid_fuzzing": {
+        "cm": [
+            [
+                1577
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+    },
+    "pfcp_in_gtp": {
+        "cm": [
+            [
+                64
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+    },
+    "uplink_wake_random_u": {
+        "cm": [
+            [
+                0,
+                672
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "set_random_ue_idle": {
+        "cm": [
+            [
+                0,
+                743
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "cn_mitm": {
+        "cm": [
+            [
+                408
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+    },
+    "add_random_nf": {
+        "cm": [
+            [
+                0,
+                190
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "remove_random_nf": {
+        "cm": [
+            [
+                0,
+                891
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "flood_deletion": {
+        "cm": [
+            [
+                890
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+    },
+    "uplink_spoofing": {
+        "cm": [
+            [
+                72
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+    },
+    "fuzz": {
+        "cm": [
+            [
+                466
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+    },
+    "downlink_wake_random": {
+        "cm": [
+            [
+                0,
+                495
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "modify_dupl": {
+        "cm": [
+            [
+                112
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+    },
+    "deregister_random_ue": {
+        "cm": [
+            [
+                0,
+                2083
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "register_random_ue": {
+        "cm": [
+            [
+                4,
+                3861
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.001034928848641656,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "restart": {
+        "cm": [
+            [
+                0,
+                2928
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    }
+}

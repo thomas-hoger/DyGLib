@@ -41,8 +41,12 @@ if __name__ == "__main__":
                                                   time_scaling_factor=args.time_scaling_factor, seed=0)
 
 
+    test_data_start = int(len(test_data.src_node_ids) * 0.8)
+    test_data_idx = range(test_data_start, len(test_data.src_node_ids))
+    print(test_data_start, len(test_data.src_node_ids))
+
     # get data loaders
-    test_idx_data_loader = get_idx_data_loader(indices_list=list(range(len(test_data.src_node_ids))), batch_size=args.batch_size, shuffle=False)
+    test_idx_data_loader = get_idx_data_loader(indices_list=list(test_data_idx), batch_size=args.batch_size, shuffle=False)
 
     val_metric_all_runs, new_node_val_metric_all_runs, test_metric_all_runs, new_node_test_metric_all_runs = [], [], [], []
 

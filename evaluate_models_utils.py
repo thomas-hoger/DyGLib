@@ -421,7 +421,7 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
             mask = batch_label != -1
             batch_label = batch_label[mask]
             prediction = prediction[mask]
-            
+                        
             pred_threshold = (prediction > 0.5).int()
             all_preds.append(pred_threshold)
             all_labels.append(torch.tensor(batch_label))
