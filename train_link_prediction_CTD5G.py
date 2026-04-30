@@ -66,6 +66,7 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.INFO)
         logger = logging.getLogger()
         logger.setLevel(logging.DEBUG)
+        logging.getLogger('matplotlib').setLevel(logging.WARNING)
         os.makedirs(f"./logs/{args.model_name}/{args.dataset_name}/{args.save_model_name}/", exist_ok=True)
         # create file handler that logs debug and higher level messages
         fh = logging.FileHandler(f"./logs/{args.model_name}/{args.dataset_name}/{args.save_model_name}/{str(time.time())}.log")
@@ -224,6 +225,8 @@ if __name__ == "__main__":
                 batch_labels = batch_labels[mask]
                 
                 loss = loss_func(input=predicts, target=torch.Tensor(batch_labels)) # + 0.3 * accuracy_score(labels, (predicts.detach() > 0.5).int())
+                if torch.any(torch.isnan(loss)):
+                    print(batch_idx)
 
                 train_losses.append(loss.item())
 
