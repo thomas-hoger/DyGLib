@@ -2,18 +2,18 @@
     "global": {
         "cm": [
             [
-                12536,
-                237
+                12740,
+                33
             ],
             [
-                670,
-                4595
+                4450,
+                815
             ]
         ],
-        "accuracy": 0.9497172635547179,
-        "precision": 0.9509519867549668,
-        "recall": 0.8727445394112061,
-        "f1_score": 0.9101713380211944
+        "accuracy": 0.7514691207450936,
+        "precision": 0.9610849056603774,
+        "recall": 0.15479582146248813,
+        "f1_score": 0.26664485522656634
     },
     "user_traffic": {
         "cm": [
@@ -33,25 +33,30 @@
                 0
             ],
             [
-                9,
-                51
+                60,
+                0
             ]
         ],
-        "accuracy": 0.85,
-        "precision": 1.0,
-        "recall": 0.85,
-        "f1_score": 0.918918918918919
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
     },
     "flood_etablishment": {
         "cm": [
             [
-                774
+                0,
+                0
+            ],
+            [
+                467,
+                307
             ]
         ],
-        "accuracy": 1.0,
+        "accuracy": 0.39664082687338503,
         "precision": 1.0,
-        "recall": 1.0,
-        "f1_score": 1.0
+        "recall": 0.39664082687338503,
+        "f1_score": 0.5679925994449584
     },
     "applicative_scan": {
         "cm": [
@@ -60,14 +65,14 @@
                 0
             ],
             [
-                130,
-                286
+                416,
+                0
             ]
         ],
-        "accuracy": 0.6875,
-        "precision": 1.0,
-        "recall": 0.6875,
-        "f1_score": 0.8148148148148148
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
     },
     "seid_fuzzing": {
         "cm": [
@@ -76,14 +81,14 @@
                 0
             ],
             [
-                11,
-                1211
+                714,
+                508
             ]
         ],
-        "accuracy": 0.9909983633387889,
+        "accuracy": 0.4157119476268412,
         "precision": 1.0,
-        "recall": 0.9909983633387889,
-        "f1_score": 0.9954788327168105
+        "recall": 0.4157119476268412,
+        "f1_score": 0.5872832369942197
     },
     "pfcp_in_gtp": {
         "cm": [
@@ -92,27 +97,27 @@
                 0
             ],
             [
-                3,
-                61
+                64,
+                0
             ]
         ],
-        "accuracy": 0.953125,
-        "precision": 1.0,
-        "recall": 0.953125,
-        "f1_score": 0.976
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
     },
     "uplink_wake_random_u": {
         "cm": [
             [
-                945,
-                11
+                951,
+                5
             ],
             [
                 0,
                 0
             ]
         ],
-        "accuracy": 0.9884937238493724,
+        "accuracy": 0.9947698744769874,
         "precision": 0.0,
         "recall": 0.0,
         "f1_score": 0.0
@@ -135,27 +140,22 @@
                 0
             ],
             [
-                339,
-                109
+                448,
+                0
             ]
         ],
-        "accuracy": 0.24330357142857142,
-        "precision": 1.0,
-        "recall": 0.24330357142857142,
-        "f1_score": 0.39138240574506283
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
     },
     "add_random_nf": {
         "cm": [
             [
-                45,
-                125
-            ],
-            [
-                0,
-                0
+                170
             ]
         ],
-        "accuracy": 0.2647058823529412,
+        "accuracy": 1.0,
         "precision": 0.0,
         "recall": 0.0,
         "f1_score": 0.0
@@ -163,15 +163,10 @@
     "remove_random_nf": {
         "cm": [
             [
-                657,
-                24
-            ],
-            [
-                0,
-                0
+                681
             ]
         ],
-        "accuracy": 0.9647577092511013,
+        "accuracy": 1.0,
         "precision": 0.0,
         "recall": 0.0,
         "f1_score": 0.0
@@ -183,14 +178,14 @@
                 0
             ],
             [
-                29,
-                1411
+                1440,
+                0
             ]
         ],
-        "accuracy": 0.9798611111111111,
-        "precision": 1.0,
-        "recall": 0.9798611111111111,
-        "f1_score": 0.9898281304805332
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
     },
     "uplink_spoofing": {
         "cm": [
@@ -215,27 +210,27 @@
                 0
             ],
             [
-                76,
-                627
+                703,
+                0
             ]
         ],
-        "accuracy": 0.8918918918918919,
-        "precision": 1.0,
-        "recall": 0.8918918918918919,
-        "f1_score": 0.9428571428571428
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
     },
     "downlink_wake_random": {
         "cm": [
             [
-                1105,
-                7
+                1108,
+                4
             ],
             [
                 0,
                 0
             ]
         ],
-        "accuracy": 0.9937050359712231,
+        "accuracy": 0.9964028776978417,
         "precision": 0.0,
         "recall": 0.0,
         "f1_score": 0.0
@@ -247,14 +242,14 @@
                 0
             ],
             [
-                19,
-                65
+                84,
+                0
             ]
         ],
-        "accuracy": 0.7738095238095238,
-        "precision": 1.0,
-        "recall": 0.7738095238095238,
-        "f1_score": 0.87248322147651
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
     },
     "deregister_random_ue": {
         "cm": [
@@ -286,15 +281,15 @@
     "restart": {
         "cm": [
             [
-                3659,
-                53
+                3705,
+                7
             ],
             [
                 0,
                 0
             ]
         ],
-        "accuracy": 0.9857219827586207,
+        "accuracy": 0.998114224137931,
         "precision": 0.0,
         "recall": 0.0,
         "f1_score": 0.0
