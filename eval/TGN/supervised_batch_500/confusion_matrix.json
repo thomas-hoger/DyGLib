@@ -1,1 +1,297 @@
-{"global": {"cm": [[12379, 394], [807, 4458]], "accuracy": 0.9334183390619802, "precision": 0.9187963726298434, "recall": 0.8467236467236468, "f1_score": 0.8812889196402095}, "user_traffic": {"cm": [[785]], "accuracy": 1.0, "precision": 0.0, "recall": 0.0, "f1_score": 0.0}, "modify_drop": {"cm": [[0, 0], [6, 54]], "accuracy": 0.9, "precision": 1.0, "recall": 0.9, "f1_score": 0.9473684210526315}, "flood_etablishment": {"cm": [[774]], "accuracy": 1.0, "precision": 1.0, "recall": 1.0, "f1_score": 1.0}, "applicative_scan": {"cm": [[0, 0], [175, 241]], "accuracy": 0.5793269230769231, "precision": 1.0, "recall": 0.5793269230769231, "f1_score": 0.7336377473363774}, "seid_fuzzing": {"cm": [[0, 0], [2, 1220]], "accuracy": 0.9983633387888707, "precision": 1.0, "recall": 0.9983633387888707, "f1_score": 0.9991809991809992}, "pfcp_in_gtp": {"cm": [[0, 0], [26, 38]], "accuracy": 0.59375, "precision": 1.0, "recall": 0.59375, "f1_score": 0.7450980392156863}, "uplink_wake_random_u": {"cm": [[956]], "accuracy": 1.0, "precision": 0.0, "recall": 0.0, "f1_score": 0.0}, "set_random_ue_idle": {"cm": [[277]], "accuracy": 1.0, "precision": 0.0, "recall": 0.0, "f1_score": 0.0}, "cn_mitm": {"cm": [[0, 0], [308, 140]], "accuracy": 0.3125, "precision": 1.0, "recall": 0.3125, "f1_score": 0.47619047619047616}, "add_random_nf": {"cm": [[93, 77], [0, 0]], "accuracy": 0.5470588235294118, "precision": 0.0, "recall": 0.0, "f1_score": 0.0}, "remove_random_nf": {"cm": [[639, 42], [0, 0]], "accuracy": 0.9383259911894273, "precision": 0.0, "recall": 0.0, "f1_score": 0.0}, "flood_deletion": {"cm": [[0, 0], [93, 1347]], "accuracy": 0.9354166666666667, "precision": 1.0, "recall": 0.9354166666666667, "f1_score": 0.9666307857911733}, "uplink_spoofing": {"cm": [[0, 0], [54, 0]], "accuracy": 0.0, "precision": 0.0, "recall": 0.0, "f1_score": 0.0}, "fuzz": {"cm": [[0, 0], [126, 577]], "accuracy": 0.8207681365576103, "precision": 1.0, "recall": 0.8207681365576103, "f1_score": 0.9015625}, "downlink_wake_random": {"cm": [[1099, 13], [0, 0]], "accuracy": 0.9883093525179856, "precision": 0.0, "recall": 0.0, "f1_score": 0.0}, "modify_dupl": {"cm": [[0, 0], [17, 67]], "accuracy": 0.7976190476190477, "precision": 1.0, "recall": 0.7976190476190477, "f1_score": 0.8874172185430463}, "deregister_random_ue": {"cm": [[1215]], "accuracy": 1.0, "precision": 0.0, "recall": 0.0, "f1_score": 0.0}, "register_random_ue": {"cm": [[3846, 19], [0, 0]], "accuracy": 0.9950840879689521, "precision": 0.0, "recall": 0.0, "f1_score": 0.0}, "restart": {"cm": [[3469, 243], [0, 0]], "accuracy": 0.9345366379310345, "precision": 0.0, "recall": 0.0, "f1_score": 0.0}}
+{
+    "global": {
+        "cm": [
+            [
+                12379,
+                394
+            ],
+            [
+                807,
+                4458
+            ]
+        ],
+        "accuracy": 0.9334183390619802,
+        "precision": 0.9187963726298434,
+        "recall": 0.8467236467236468,
+        "f1_score": 0.8812889196402095
+    },
+    "user_traffic": {
+        "cm": [
+            [
+                785
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "modify_drop": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                6,
+                54
+            ]
+        ],
+        "accuracy": 0.9,
+        "precision": 1.0,
+        "recall": 0.9,
+        "f1_score": 0.9473684210526315
+    },
+    "flood_etablishment": {
+        "cm": [
+            [
+                774
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0
+    },
+    "applicative_scan": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                175,
+                241
+            ]
+        ],
+        "accuracy": 0.5793269230769231,
+        "precision": 1.0,
+        "recall": 0.5793269230769231,
+        "f1_score": 0.7336377473363774
+    },
+    "seid_fuzzing": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                2,
+                1220
+            ]
+        ],
+        "accuracy": 0.9983633387888707,
+        "precision": 1.0,
+        "recall": 0.9983633387888707,
+        "f1_score": 0.9991809991809992
+    },
+    "pfcp_in_gtp": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                26,
+                38
+            ]
+        ],
+        "accuracy": 0.59375,
+        "precision": 1.0,
+        "recall": 0.59375,
+        "f1_score": 0.7450980392156863
+    },
+    "uplink_wake_random_u": {
+        "cm": [
+            [
+                956
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "set_random_ue_idle": {
+        "cm": [
+            [
+                277
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "cn_mitm": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                308,
+                140
+            ]
+        ],
+        "accuracy": 0.3125,
+        "precision": 1.0,
+        "recall": 0.3125,
+        "f1_score": 0.47619047619047616
+    },
+    "add_random_nf": {
+        "cm": [
+            [
+                93,
+                77
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.5470588235294118,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "remove_random_nf": {
+        "cm": [
+            [
+                639,
+                42
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.9383259911894273,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "flood_deletion": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                93,
+                1347
+            ]
+        ],
+        "accuracy": 0.9354166666666667,
+        "precision": 1.0,
+        "recall": 0.9354166666666667,
+        "f1_score": 0.9666307857911733
+    },
+    "uplink_spoofing": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                54,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "fuzz": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                126,
+                577
+            ]
+        ],
+        "accuracy": 0.8207681365576103,
+        "precision": 1.0,
+        "recall": 0.8207681365576103,
+        "f1_score": 0.9015625
+    },
+    "downlink_wake_random": {
+        "cm": [
+            [
+                1099,
+                13
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.9883093525179856,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "modify_dupl": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                17,
+                67
+            ]
+        ],
+        "accuracy": 0.7976190476190477,
+        "precision": 1.0,
+        "recall": 0.7976190476190477,
+        "f1_score": 0.8874172185430463
+    },
+    "deregister_random_ue": {
+        "cm": [
+            [
+                1215
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "register_random_ue": {
+        "cm": [
+            [
+                3846,
+                19
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.9950840879689521,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "restart": {
+        "cm": [
+            [
+                3469,
+                243
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.9345366379310345,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    }
+}
