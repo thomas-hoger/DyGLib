@@ -288,9 +288,8 @@ def evaluate_model_reconstruction(model_name: str, expe_name: str, model: nn.Mod
             if sum(attack_counters.values()) >= 2*len(attack_type_vocab):
                 break
 
-
-    # os.makedirs('./losses', exist_ok=True)
-    # np.save(f'./losses/{model_name}.npy', np.array(evaluate_losses))
+    os.makedirs('./losses', exist_ok=True)
+    np.save(f'./losses/{model_name}.npy', np.array(evaluate_losses))
         
     # os.makedirs('./embeddings', exist_ok=True)
     # np.save(f'./embeddings/{model_name}.npy', np.array(evaluate_embeddings)) 

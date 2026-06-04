@@ -128,7 +128,7 @@ if __name__ == "__main__":
         version = 0
         for filename in os.listdir(save_model_folder):
             split = filename.split(".")
-            if split[1] == ".pkl" :   
+            if split[1] == "pkl" :   
                 version = max(version, int(split[0][-1]))
         
         if version > 0:
