@@ -5,6 +5,7 @@ old/
 losses/
 embeddings/
 node_label_mapping.json
+nlp/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

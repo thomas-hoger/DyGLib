@@ -29,9 +29,6 @@ cmap = plt.cm.RdYlGn_r
 feature_vocab = {'http2.path': 0, 'pfcp.seid': 1, 'pfcp.f_teid.teid': 2, 'gtp.ext_hdr.pdu_ses_con.pdu_type': 3, 'http2.ausfInstanceId': 4, 'http2.ueId': 5, 'http2.imsi': 6, 'http2.amfInstanceId': 7, 'http2.cause': 8, 'http2.service-names': 9, 'http2.target-nf-type': 10, 'pfcp.apply_action.forw': 11, 'ip_src': 12, 'pfcp.msg_type': 13, 'pfcp.outer_hdr_creation.teid': 14, 'http2.nfInstanceId': 15, 'http2.target-nf-instance-id': 16, 'http2.supis': 17, 'gtp.teid': 18, 'pfcp.f_teid.ipv4_addr': 19, 'http2.ipv4Address': 20, 'pfcp.ue_ip_addr_ipv4': 21, 'http2.nfType': 22, 'http2.request.supi': 23, 'pfcp.pdr_id': 24, 'pfcp.apply_action.drop': 25, 'http2.supi': 26, 'http2.subscriberIdentifier': 27, 'ip.ip_dst': 28, 'pfcp.far_id': 29, 'ip.ip_src': 30, 'http2.jwt.scope': 31, 'ip_dst': 32, 'http2.nf-type': 33, 'pfcp.cause': 34, 'pfcp.outer_hdr_creation.ipv4': 35, 'http2.requester-nf-type': 36, 'pfcp.f_seid.ipv4': 37, 'http2.jwt.sub': 38, 'http2.method': 39, 'http2.servingNfId': 40}
 attack_type_vocab = {'user_traffic': 0, 'modify_drop': 1, 'flood_etablishment': 2, 'applicative_scan': 3, 'seid_fuzzing': 4, 'pfcp_in_gtp': 5, 'uplink_wake_random_u': 6, 'set_random_ue_idle': 7, 'cn_mitm': 8, 'add_random_nf': 9, 'remove_random_nf': 10, 'flood_deletion': 11, 'uplink_spoofing': 12, 'fuzz': 13, 'downlink_wake_random': 14, 'modify_dupl': 15, 'deregister_random_ue': 16, 'register_random_ue': 17, 'restart': 18, 'unknown': 19}
 
-loss_min = 0
-loss_max = 0.65
-
 def plot_graph_with_loss(nx_graph, node_colors, node_labels, save_dir):
     pos = nx.spring_layout(nx_graph, seed=42)
 
@@ -138,12 +135,12 @@ def evaluate_model_reconstruction(model_name: str, expe_name: str, model: nn.Mod
     with torch.no_grad():
         # store evaluate losses and metrics
         evaluate_losses = []
+        evaluate_labels = []
         evaluate_embeddings = []
         
         evaluate_metrics = []
         
-        
-        evaluate_idx_data_loader_tqdm = tqdm(evaluate_idx_data_loader, ncols=120)
+        evaluate_idx_data_loader_tqdm = tqdm(evaluate_idx_data_loader, ncols=120, desc="First parsing, losses")
         for batch_idx, evaluate_data_indices in enumerate(evaluate_idx_data_loader_tqdm):
             evaluate_data_indices = evaluate_data_indices.numpy()
             batch_src_node_ids, batch_dst_node_ids, batch_node_interact_times, batch_edge_ids, batch_label, batch_attack, batch_packet_id = \
@@ -210,7 +207,71 @@ def evaluate_model_reconstruction(model_name: str, expe_name: str, model: nn.Mod
                
             if not selected_attack:
                 continue 
+        
+            selected_attack_label = list(attack_type_vocab.keys())[selected_attack]
+            original_msg = model[0].edge_raw_features[batch_edge_ids]
+            event_embedding = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
+            
+            for i in range(len(event_embedding)):  
+                loss = loss_func(event_embedding[i], original_msg[i]).item()
+                evaluate_losses.append(loss)
+                evaluate_embeddings.append(event_embedding[i])
+                evaluate_labels.append(batch_label[i])                
 
+        all_labels  = np.array(evaluate_labels)
+        norm_losses = np.array(evaluate_losses)
+        
+        norm_losses = (norm_losses - norm_losses.min()) / (norm_losses.max() - norm_losses.min())
+        norm_losses = np.clip(norm_losses,0,1)
+        
+        os.makedirs(f'./eval/{model_name}/{expe_name}', exist_ok=True)
+        np.save(f'./eval/{model_name}/{expe_name}/norm_losses.json', np.array(norm_losses))
+        
+        mask       = all_labels != -1 
+        all_labels = all_labels[mask] 
+        all_preds  = norm_losses[mask]
+        
+        thresholds = np.arange(0.05, 0.85, 0.05)
+        
+        accuracies = []
+        precisions = []
+        recalls = []
+        f1s = []
+
+        for threshold in thresholds:
+            preds = (all_preds > threshold).astype(int)
+
+            accuracies.append(accuracy_score(all_labels, preds))
+            precisions.append(precision_score(all_labels, preds, zero_division=0))
+            recalls.append(recall_score(all_labels, preds, zero_division=0))
+            f1s.append(f1_score(all_labels, preds, zero_division=0))
+
+        plt.figure(figsize=(8, 5))
+
+        plt.plot(thresholds, accuracies, marker='o', label='Accuracy')
+        plt.plot(thresholds, precisions, marker='o', label='Precision')
+        plt.plot(thresholds, recalls, marker='o', label='Recall')
+        plt.plot(thresholds, f1s, marker='o', label='F1-score')
+
+        plt.xlabel("Threshold")
+        plt.ylabel("Score")
+        plt.title("Metrics vs Threshold")
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+
+        os.makedirs(f'./eval/{model_name}/{expe_name}', exist_ok=True)
+        plt.savefig(f'./eval/{model_name}/{expe_name}/metrics_vs_threshold.png', dpi=300, bbox_inches='tight')
+        plt.close()
+
+        evaluate_idx_data_loader_tqdm = tqdm(evaluate_idx_data_loader, ncols=120, desc="Second parsing, graph")
+        for batch_idx, evaluate_data_indices in enumerate(evaluate_idx_data_loader_tqdm):
+            evaluate_data_indices = evaluate_data_indices.numpy()
+            batch_src_node_ids, batch_dst_node_ids, batch_node_interact_times, batch_edge_ids, batch_label, batch_attack, batch_packet_id = \
+                evaluate_data.src_node_ids[evaluate_data_indices],  evaluate_data.dst_node_ids[evaluate_data_indices], \
+                evaluate_data.node_interact_times[evaluate_data_indices], evaluate_data.edge_ids[evaluate_data_indices], \
+                evaluate_data.labels[evaluate_data_indices], evaluate_data.attack_type[evaluate_data_indices], evaluate_data.packet_id[evaluate_data_indices]
+            
             nx_graph = nx.Graph()
             nx_full_graph = nx.Graph()
             
@@ -220,31 +281,15 @@ def evaluate_model_reconstruction(model_name: str, expe_name: str, model: nn.Mod
             full_node_colors = {}
             full_node_labels = {}
             
-            local_embeddings = []
-            local_labels     = []
-            local_procedures = []
-            
-            selected_attack_label = list(attack_type_vocab.keys())[selected_attack]
-            
-            original_msg = model[0].edge_raw_features[batch_edge_ids]
-            event_embedding = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
-            
             for i in range(len(event_embedding)):
-                                
-                src = batch_src_node_ids[i].item()
-                dst = batch_dst_node_ids[i].item()
-
+                
                 if attack_counters[selected_attack] < 3:
                     
+                    src = batch_src_node_ids[i].item()
+                    dst = batch_dst_node_ids[i].item()
                     edge_text = list(feature_vocab.keys())[original_msg[i].argmax().item()]
 
-                    loss_masked = loss_func(event_embedding[i], original_msg[i]).item()
-                    norm_loss = (loss_masked - loss_min) / (loss_max - loss_min)
-                    loss_masked = max(0, min(1, norm_loss))
-                    color = cmap(loss_masked)
-                    
-                    # if attack_counters[selected_attack] == 1 and selected_attack_label == "restart":
-                    #     print(i,src,dst,batch_edge_ids[i],original_msg[i].argmax().item(),edge_text)
+                    color = cmap(norm_losses[i])
                     
                     # Full graph
                     if batch_label[i].item() == 1:
@@ -254,7 +299,7 @@ def evaluate_model_reconstruction(model_name: str, expe_name: str, model: nn.Mod
                     full_node_colors[dst] = "black"
 
                     full_node_labels[src] = list(attack_type_vocab.keys())[batch_attack[i]]
-                    nx_full_graph.add_edge(batch_src_node_ids[i].item(), batch_dst_node_ids[i].item(), label=edge_text, color=color, loss=loss_masked)
+                    nx_full_graph.add_edge(batch_src_node_ids[i].item(), batch_dst_node_ids[i].item(), label=edge_text, color=color, loss=norm_losses[i])
 
                     # Subgraph with selected attack type
                     if batch_attack[i] == selected_attack:
@@ -265,15 +310,8 @@ def evaluate_model_reconstruction(model_name: str, expe_name: str, model: nn.Mod
                         node_colors[dst] = "black"
                         node_labels[src] = list(attack_type_vocab.keys())[batch_attack[i]] 
                         
-                        nx_graph.add_edge(batch_src_node_ids[i].item(), batch_dst_node_ids[i].item(), label=edge_text, color=color, loss=loss_masked)
+                        nx_graph.add_edge(batch_src_node_ids[i].item(), batch_dst_node_ids[i].item(), label=edge_text, color=color, loss=norm_losses[i])
                     
-                local_embeddings.append(event_embedding[i].cpu().numpy())
-                local_labels.append(edge_text)
-                local_procedures.append(batch_attack[i])
-
-                loss = loss_func(event_embedding[i], original_msg[i]).item()
-                evaluate_losses.append(loss)
-                evaluate_embeddings.append(event_embedding[i])
                 
             save_dir = f'./figures/{model_name}/{expe_name}'
             os.makedirs(f'./figures/{model_name}/{expe_name}', exist_ok=True)
@@ -288,8 +326,8 @@ def evaluate_model_reconstruction(model_name: str, expe_name: str, model: nn.Mod
             if sum(attack_counters.values()) >= 2*len(attack_type_vocab):
                 break
 
-    os.makedirs('./losses', exist_ok=True)
-    np.save(f'./losses/{model_name}.npy', np.array(evaluate_losses))
+    # os.makedirs('./losses', exist_ok=True)
+    # np.save(f'./losses/{model_name}.npy', np.array(evaluate_losses))
         
     # os.makedirs('./embeddings', exist_ok=True)
     # np.save(f'./embeddings/{model_name}.npy', np.array(evaluate_embeddings)) 

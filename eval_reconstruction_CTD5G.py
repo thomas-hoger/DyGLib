@@ -106,14 +106,8 @@ if __name__ == "__main__":
                                         max_input_sequence_length=args.max_input_sequence_length, device=args.device)
     else:
         raise ValueError(f"Wrong value for model_name {args.model_name}!")
-    
-    # print(edge_raw_features[0])
-    # for i in range(5):
-    #     print(i,train_data.src_node_ids[i],train_data.dst_node_ids[i],
-    #           train_data.edge_ids[i], edge_raw_features[train_data.edge_ids[i]].argmax().item())
 
     edge_feature_dim = edge_raw_features.shape[1]
-    # link_predictor   = Decoder(in_channels=edge_feature_dim, out_channels=edge_feature_dim)
     link_predictor = MergeLayer(input_dim1=node_raw_features.shape[1], input_dim2=node_raw_features.shape[1],
                 hidden_dim=node_raw_features.shape[1], output_dim=node_raw_features.shape[1])
     
@@ -123,7 +117,6 @@ if __name__ == "__main__":
                 f'{get_parameter_sizes(model) * 4 / 1024} KB, {get_parameter_sizes(model) * 4 / 1024 / 1024} MB.')
 
     optimizer = create_optimizer(model=model, optimizer_name=args.optimizer, learning_rate=args.learning_rate, weight_decay=args.weight_decay)
-
     model = convert_to_gpu(model, device=args.device)
 
     save_model_folder = f"./saved_models/{args.model_name}/{args.dataset_name}/{args.save_model_name}/"
@@ -131,7 +124,6 @@ if __name__ == "__main__":
     loss_func = nn.BCELoss()
 
     if args.model_name in ['DyRep', 'TGAT', 'TGN', 'CAWN', 'TCL', 'GraphMixer', 'DyGFormer']:
-        # training, only use training graph
         model[0].set_neighbor_sampler(test_neighbor_sampler)
         
     version = 3

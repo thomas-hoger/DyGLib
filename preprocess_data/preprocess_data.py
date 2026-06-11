@@ -8,6 +8,32 @@ import torch.nn.functional as F
 from distutils.dir_util import copy_tree
 from tqdm import tqdm
 
+# import fasttext
+from transformers import AutoTokenizer, AutoModel
+
+# nlp_model_path = "../nlp/fasttext.bin"
+# nlp_model_path = "../nlp/cc.en.300.bin"
+# fasttext_model = fasttext.load_model(nlp_model_path)
+
+nlp_model_path = "distilbert-base-uncased"
+# nlp_model_path = "../nlp/bert_finetuned/"
+tokenizer = AutoTokenizer.from_pretrained(nlp_model_path)
+bert = AutoModel.from_pretrained(nlp_model_path)
+
+def get_bert_embedding(word):
+    inputs = tokenizer(word, return_tensors="pt")
+
+    with torch.no_grad():
+        outputs = bert(**inputs)
+
+    # embeddings du dernier layer
+    hidden_states = outputs.last_hidden_state
+
+    # moyenne des tokens (sans CLS/SEP)
+    embedding = hidden_states[0, 1:-1].mean(dim=0)
+
+    return embedding.numpy()
+
 attack_type_vocab = {'user_traffic': 0, 'modify_drop': 1, 'flood_etablishment': 2, 'applicative_scan': 3, 'seid_fuzzing': 4, 'pfcp_in_gtp': 5, 'uplink_wake_random_u': 6, 'set_random_ue_idle': 7, 'cn_mitm': 8, 'add_random_nf': 9, 'remove_random_nf': 10, 'flood_deletion': 11, 'uplink_spoofing': 12, 'fuzz': 13, 'downlink_wake_random': 14, 'modify_dupl': 15, 'deregister_random_ue': 16, 'register_random_ue': 17, 'restart': 18, 'unknown': 19}
 feature_vocab     = {'http2.path': 0, 'pfcp.seid': 1, 'pfcp.f_teid.teid': 2, 'gtp.ext_hdr.pdu_ses_con.pdu_type': 3, 'http2.ausfInstanceId': 4, 'http2.ueId': 5, 'http2.imsi': 6, 'http2.amfInstanceId': 7, 'http2.cause': 8, 'http2.service-names': 9, 'http2.target-nf-type': 10, 'pfcp.apply_action.forw': 11, 'ip_src': 12, 'pfcp.msg_type': 13, 'pfcp.outer_hdr_creation.teid': 14, 'http2.nfInstanceId': 15, 'http2.target-nf-instance-id': 16, 'http2.supis': 17, 'gtp.teid': 18, 'pfcp.f_teid.ipv4_addr': 19, 'http2.ipv4Address': 20, 'pfcp.ue_ip_addr_ipv4': 21, 'http2.nfType': 22, 'http2.request.supi': 23, 'pfcp.pdr_id': 24, 'pfcp.apply_action.drop': 25, 'http2.supi': 26, 'http2.subscriberIdentifier': 27, 'ip.ip_dst': 28, 'pfcp.far_id': 29, 'ip.ip_src': 30, 'http2.jwt.scope': 31, 'ip_dst': 32, 'http2.nf-type': 33, 'pfcp.cause': 34, 'pfcp.outer_hdr_creation.ipv4': 35, 'http2.requester-nf-type': 36, 'pfcp.f_seid.ipv4': 37, 'http2.jwt.sub': 38, 'http2.method': 39, 'http2.servingNfId': 40, 'other': 41}
 
@@ -27,7 +53,7 @@ def preprocess(dataset_name: str):
     with open(dataset_name) as f:
         # skip the first line
         s = next(f)
-        for idx, line in tqdm(enumerate(f), desc='preprocessing data', total=4130000):
+        for idx, line in tqdm(enumerate(f), desc='preprocessing data', total=967000):
             e = line.strip().split(',')
             # user_id
             u = int(e[0])+1
@@ -48,7 +74,9 @@ def preprocess(dataset_name: str):
             # edge index
             idx_list.append(idx+1)
 
-            feat = F.one_hot(torch.tensor(int(e[4])), num_classes=len(feature_vocab)).float()
+            # feat = F.one_hot(torch.tensor(int(e[4])), num_classes=len(feature_vocab)).float()
+            # feat = fasttext_model.get_word_vector(e[4])
+            feat = get_bert_embedding(e[4])
             feat_l.append(feat)
             
             attack_type = int(e[5])
@@ -164,10 +192,7 @@ def check_data(dataset_name: str):
     assert origin_n_feat.shape == n_feat.shape and origin_n_feat.max() == n_feat.max() and origin_n_feat.min() == n_feat.min()
 
 parser = argparse.ArgumentParser('Interface for preprocessing datasets')
-parser.add_argument('--dataset_name', type=str,
-                    choices=['wikipedia', 'reddit', 'mooc', 'lastfm', 'myket', 'enron', 'SocialEvo', 'uci',
-                             'Flights', 'CanParl', 'USLegis', 'UNtrade', 'UNvote', 'Contacts', "CTD5G", "CTD5G_test", "new_CTD5G", "new_CTD5G_test"],
-                    help='Dataset name', default='CTD5G')
+parser.add_argument('--dataset_name', type=str, help='Dataset name', default='CTD5G')
 
 node_feat_dim_default = len(feature_vocab)
 parser.add_argument('--node_feat_dim', type=int, default=node_feat_dim_default, help='Number of node raw features')
