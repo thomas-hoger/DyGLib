@@ -194,21 +194,6 @@ def evaluate_model_reconstruction(model_name: str, expe_name: str, model: nn.Mod
             else:
                 raise ValueError(f"Wrong value for model_name {model_name}!")
             
-            selected_attack = None
-            for att_type in np.unique(batch_attack):
-                
-                if att_type not in attack_counters:
-                    attack_counters[att_type] = 0
-                
-                if attack_counters[att_type] < 3:
-                    attack_counters[att_type] += 1
-                    selected_attack = att_type
-                    break 
-               
-            if not selected_attack:
-                continue 
-        
-            selected_attack_label = list(attack_type_vocab.keys())[selected_attack]
             original_msg = model[0].edge_raw_features[batch_edge_ids]
             event_embedding = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
             
@@ -218,18 +203,20 @@ def evaluate_model_reconstruction(model_name: str, expe_name: str, model: nn.Mod
                 evaluate_embeddings.append(event_embedding[i])
                 evaluate_labels.append(batch_label[i])                
 
+
         all_labels  = np.array(evaluate_labels)
         norm_losses = np.array(evaluate_losses)
         
         norm_losses = (norm_losses - norm_losses.min()) / (norm_losses.max() - norm_losses.min())
         norm_losses = np.clip(norm_losses,0,1)
-        
-        os.makedirs(f'./eval/{model_name}/{expe_name}', exist_ok=True)
-        np.save(f'./eval/{model_name}/{expe_name}/norm_losses.json', np.array(norm_losses))
-        
+                
         mask       = all_labels != -1 
         all_labels = all_labels[mask] 
         all_preds  = norm_losses[mask]
+        
+        os.makedirs(f'./eval/{model_name}/{expe_name}', exist_ok=True)
+        np.save(f'./eval/{model_name}/{expe_name}/all_labels', np.array(all_labels))
+        np.save(f'./eval/{model_name}/{expe_name}/all_preds', np.array(all_preds))
         
         thresholds = np.arange(0.05, 0.85, 0.05)
         
@@ -260,7 +247,7 @@ def evaluate_model_reconstruction(model_name: str, expe_name: str, model: nn.Mod
         plt.legend()
         plt.tight_layout()
 
-        os.makedirs(f'./eval/{model_name}/{expe_name}', exist_ok=True)
+    
         plt.savefig(f'./eval/{model_name}/{expe_name}/metrics_vs_threshold.png', dpi=300, bbox_inches='tight')
         plt.close()
 
@@ -271,6 +258,22 @@ def evaluate_model_reconstruction(model_name: str, expe_name: str, model: nn.Mod
                 evaluate_data.src_node_ids[evaluate_data_indices],  evaluate_data.dst_node_ids[evaluate_data_indices], \
                 evaluate_data.node_interact_times[evaluate_data_indices], evaluate_data.edge_ids[evaluate_data_indices], \
                 evaluate_data.labels[evaluate_data_indices], evaluate_data.attack_type[evaluate_data_indices], evaluate_data.packet_id[evaluate_data_indices]
+            
+            selected_attack = None
+            for att_type in np.unique(batch_attack):
+                
+                if att_type not in attack_counters:
+                    attack_counters[att_type] = 0
+                
+                if attack_counters[att_type] < 3:
+                    attack_counters[att_type] += 1
+                    selected_attack = att_type
+                    break 
+               
+            if not selected_attack:
+                continue 
+        
+            selected_attack_label = list(attack_type_vocab.keys())[selected_attack]
             
             nx_graph = nx.Graph()
             nx_full_graph = nx.Graph()
