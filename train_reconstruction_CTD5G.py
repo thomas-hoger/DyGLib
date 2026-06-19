@@ -105,6 +105,7 @@ if __name__ == "__main__":
             raise ValueError(f"Wrong value for model_name {args.model_name}!")
         
         edge_feature_dim = edge_raw_features.shape[1]
+        
         # link_predictor   = Decoder(in_channels=edge_feature_dim, out_channels=edge_feature_dim)
         link_predictor = MergeLayer(input_dim1=edge_feature_dim, input_dim2=edge_feature_dim,
                     hidden_dim=edge_feature_dim, output_dim=edge_feature_dim)
@@ -125,7 +126,7 @@ if __name__ == "__main__":
         early_stopping = EarlyStopping(patience=args.patience, save_model_folder=save_model_folder,
                                        save_model_name=args.save_model_name, logger=logger, model_name=args.model_name)
 
-        loss_func = nn.BCELoss()
+        loss_func = nn.MSELoss()
 
         for epoch in range(args.num_epochs):
 
@@ -198,6 +199,7 @@ if __name__ == "__main__":
                 
                 event_embedding = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
                 original_msg = model[0].edge_raw_features[batch_edge_ids]
+                
                 loss = loss_func(input=event_embedding, target=original_msg)
                 
                 train_losses.append(loss.item())
