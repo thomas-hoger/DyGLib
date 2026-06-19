@@ -107,7 +107,7 @@ if __name__ == "__main__":
         edge_feature_dim = edge_raw_features.shape[1]
         # link_predictor   = Decoder(in_channels=edge_feature_dim, out_channels=edge_feature_dim)
         link_predictor = MergeLayer(input_dim1=edge_feature_dim, input_dim2=edge_feature_dim,
-                    hidden_dim=edge_feature_dim output_dim=edge_feature_dim)
+                    hidden_dim=edge_feature_dim, output_dim=edge_feature_dim)
         
         model = nn.Sequential(dynamic_backbone, link_predictor)
         logger.info(f'model -> {model}')
