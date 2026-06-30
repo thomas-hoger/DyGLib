@@ -7,6 +7,8 @@ embeddings/
 node_label_mapping.json
 nlp/*
 
+*.sh
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

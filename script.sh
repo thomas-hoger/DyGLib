@@ -1,12 +1,16 @@
 #!/bin/bash
 
-# models=('JODIE' 'DyRep' 'TGAT' 'TGN' 'CAWN' 'TCL' 'GraphMixer')
-# models=('JODIE' 'DyRep' 'DyGFormer' 'TGN' 'TCL' 'GraphMixer')
+models=('DyGFormer' 'GraphMixer' 'TCL' 'CAWN' 'TGN' 'JODIE' 'DyRep')
 
-models=('DyGFormer' 'GraphMixer' 'TGAT' 'TCL' 'CAWN' 'TGN' 'JODIE' 'DyRep') 
+logfile="execution_times.log"
+: > "$logfile"   # Vide le fichier au début
 
 for model in "${models[@]}"; do
-    # python train_reconstruction_CTD5G.py --num_epochs=2 --model_name="$model"
-    python train_link_prediction_CTD5G.py --num_epochs=5 --model_name="$model" --time_feat_dim=30 --expe_name=baseline
-    # python eval_model_CTD5G.py --model_name="$model"
+    echo "===== $model =====" | tee -a "$logfile"
+
+    /usr/bin/time -f "Temps réel: %E\nTemps CPU: %U user %S sys\nMémoire max: %M KB" \
+        -o "$logfile" -a \
+        python eval_model_CTD5G.py --model_name="$model"
+
+    echo "" >> "$logfile"
 done
