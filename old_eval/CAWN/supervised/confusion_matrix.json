@@ -1,0 +1,297 @@
+{
+    "global": {
+        "cm": [
+            [
+                12740,
+                33
+            ],
+            [
+                4450,
+                815
+            ]
+        ],
+        "accuracy": 0.7514691207450936,
+        "precision": 0.9610849056603774,
+        "recall": 0.15479582146248813,
+        "f1_score": 0.26664485522656634
+    },
+    "user_traffic": {
+        "cm": [
+            [
+                785
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "modify_drop": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                60,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "flood_etablishment": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                467,
+                307
+            ]
+        ],
+        "accuracy": 0.39664082687338503,
+        "precision": 1.0,
+        "recall": 0.39664082687338503,
+        "f1_score": 0.5679925994449584
+    },
+    "applicative_scan": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                416,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "seid_fuzzing": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                714,
+                508
+            ]
+        ],
+        "accuracy": 0.4157119476268412,
+        "precision": 1.0,
+        "recall": 0.4157119476268412,
+        "f1_score": 0.5872832369942197
+    },
+    "pfcp_in_gtp": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                64,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "uplink_wake_random_u": {
+        "cm": [
+            [
+                951,
+                5
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.9947698744769874,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "set_random_ue_idle": {
+        "cm": [
+            [
+                277
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "cn_mitm": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                448,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "add_random_nf": {
+        "cm": [
+            [
+                170
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "remove_random_nf": {
+        "cm": [
+            [
+                681
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "flood_deletion": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                1440,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "uplink_spoofing": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                54,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "fuzz": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                703,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "downlink_wake_random": {
+        "cm": [
+            [
+                1108,
+                4
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.9964028776978417,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "modify_dupl": {
+        "cm": [
+            [
+                0,
+                0
+            ],
+            [
+                84,
+                0
+            ]
+        ],
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "deregister_random_ue": {
+        "cm": [
+            [
+                1215
+            ]
+        ],
+        "accuracy": 1.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "register_random_ue": {
+        "cm": [
+            [
+                3848,
+                17
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.995601552393273,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    },
+    "restart": {
+        "cm": [
+            [
+                3705,
+                7
+            ],
+            [
+                0,
+                0
+            ]
+        ],
+        "accuracy": 0.998114224137931,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0
+    }
+}
