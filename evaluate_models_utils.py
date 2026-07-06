@@ -290,7 +290,8 @@ def evaluate_model_reconstruction(model_name: str, expe_name: str, model: nn.Mod
                     
                     src = batch_src_node_ids[i].item()
                     dst = batch_dst_node_ids[i].item()
-                    edge_text = list(feature_vocab.keys())[original_msg[i].argmax().item()]
+                    #edge_text = list(feature_vocab.keys())[original_msg[i].argmax().item()]
+                    edge_text = ""
 
                     color = cmap(norm_losses[i])
                     
