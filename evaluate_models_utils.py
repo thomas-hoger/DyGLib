@@ -51,13 +51,13 @@ def plot_graph_with_loss(nx_graph, node_colors, node_labels, save_dir):
     )
 
     # 🔥 labels uniquement pour sources
-    nx.draw_networkx_labels(
-        nx_graph,
-        pos,
-        labels=node_labels,
-        font_size=6,
-        font_color="gray"
-    )
+    # nx.draw_networkx_labels(
+    #     nx_graph,
+    #     pos,
+    #     labels=node_labels,
+    #     font_size=6,
+    #     font_color="gray"
+    # )
 
     # 🔥 garder seulement les edges avec forte loss
     edge_labels = {
@@ -382,7 +382,7 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
             else:
                 raise ValueError(f"Wrong value for model_name {model_name}!")
                         
-            stop_attack_counter = 5
+            stop_attack_counter = 1
                         
             selected_attack = None
             for att_type in np.unique(batch_attack):
@@ -435,6 +435,7 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
                 if attack_counters[selected_attack] < 3:
                     
                     edge_text = list(feature_vocab.keys())[original_msg[i].argmax().item()]
+                    edge_text = ""
 
                     truth = torch.tensor(batch_label[i], dtype=torch.float32)
                     loss  = loss_func(prediction[i], truth).item()
