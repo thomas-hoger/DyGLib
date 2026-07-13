@@ -40,7 +40,6 @@ if __name__ == "__main__":
     test_neighbor_sampler = get_neighbor_sampler(data=test_data, sample_neighbor_strategy=args.sample_neighbor_strategy,
                                                   time_scaling_factor=args.time_scaling_factor, seed=0)
 
-
     # get data loaders
     test_idx_data_loader = get_idx_data_loader(indices_list=list(range(len(test_data.src_node_ids))), batch_size=args.batch_size, shuffle=False)
 
@@ -121,7 +120,7 @@ if __name__ == "__main__":
 
     save_model_folder = f"./saved_models/{args.model_name}/{args.dataset_name}/{args.save_model_name}/"
 
-    loss_func = nn.BCELoss()
+    loss_func = nn.MSELoss()
 
     if args.model_name in ['DyRep', 'TGAT', 'TGN', 'CAWN', 'TCL', 'GraphMixer', 'DyGFormer']:
         model[0].set_neighbor_sampler(test_neighbor_sampler)
