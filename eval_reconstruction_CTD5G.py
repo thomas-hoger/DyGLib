@@ -40,8 +40,13 @@ if __name__ == "__main__":
     test_neighbor_sampler = get_neighbor_sampler(data=test_data, sample_neighbor_strategy=args.sample_neighbor_strategy,
                                                   time_scaling_factor=args.time_scaling_factor, seed=0)
 
+    test_data_start = 0
+    test_data_end   = int(len(test_data.src_node_ids) * 0.1)
+    test_data_idx   = range(test_data_start, test_data_end)
+    print(test_data_start, test_data_end)
+
     # get data loaders
-    test_idx_data_loader = get_idx_data_loader(indices_list=list(range(len(test_data.src_node_ids))), batch_size=args.batch_size, shuffle=False)
+    test_idx_data_loader = get_idx_data_loader(indices_list=list(test_data_idx), batch_size=args.batch_size, shuffle=False)
 
     val_metric_all_runs, new_node_val_metric_all_runs, test_metric_all_runs, new_node_test_metric_all_runs = [], [], [], []
 

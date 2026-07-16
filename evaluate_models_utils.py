@@ -475,7 +475,8 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
 
                 if attack_counters[selected_attack] < 3:
                     
-                    edge_text = list(feature_vocab.keys())[original_msg[i].argmax().item()]
+                    # edge_text = list(feature_vocab.keys())[original_msg[i].argmax().item()]
+                    edge_text = ""
 
                     truth = torch.tensor(batch_label[i], dtype=torch.float32)
                     loss  = loss_func(prediction[i], truth).item()
