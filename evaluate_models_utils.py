@@ -423,7 +423,7 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
             else:
                 raise ValueError(f"Wrong value for model_name {model_name}!")
                         
-            stop_attack_counter = 3
+            stop_attack_counter = 1000
                         
             selected_attack = None
             for att_type in np.unique(batch_attack):
