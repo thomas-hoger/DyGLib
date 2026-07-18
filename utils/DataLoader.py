@@ -86,7 +86,11 @@ def get_reconstruction_data(dataset_name: str, val_ratio: float, test_ratio: flo
 
     # Concatenate both train and
     edge_raw_features = np.concatenate([edge_raw_features, edge_raw_features_test], axis=0)
-    node_raw_features = np.concatenate([node_raw_features, node_raw_features_test], axis=0)
+    # node_raw_features = np.concatenate([node_raw_features, node_raw_features_test], axis=0)
+
+    size = node_raw_features.shape[0] + node_raw_features_test.shape[0] 
+    dim  = max(node_raw_features.shape[1], node_raw_features_test.shape[1])
+    node_raw_features = np.zeros((size,dim))
 
     # Train 
     src_node_ids = graph_df.u.values.astype(np.longlong)

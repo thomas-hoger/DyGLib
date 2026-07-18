@@ -6,6 +6,7 @@ losses/
 embeddings/
 node_label_mapping.json
 nlp/*
+eval/*
 
 *.sh
 

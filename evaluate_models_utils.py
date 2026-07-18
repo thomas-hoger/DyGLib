@@ -423,7 +423,7 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
             else:
                 raise ValueError(f"Wrong value for model_name {model_name}!")
                         
-            stop_attack_counter = 5
+            stop_attack_counter = 3
                         
             selected_attack = None
             for att_type in np.unique(batch_attack):
@@ -467,89 +467,95 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
             all_preds.append(pred_threshold)
             all_labels.append(torch.tensor(batch_label))
             all_attacks.append(torch.tensor(batch_attack[mask]))
-
-            for i in range(len(prediction)):
-                                
-                src = batch_src_node_ids[mask][i].item()
-                dst = batch_dst_node_ids[mask][i].item()
-
-                if attack_counters[selected_attack] < 3:
-                    
-                    # edge_text = list(feature_vocab.keys())[original_msg[i].argmax().item()]
-                    edge_text = ""
-
-                    truth = torch.tensor(batch_label[i], dtype=torch.float32)
-                    loss  = loss_func(prediction[i], truth).item()
-                    color = cmap(prediction[i])
-                    
-                    # if attack_counters[selected_attack] == 1 and selected_attack_label == "restart":
-                    #     print(i,src,dst,batch_edge_ids[i],original_msg[i].argmax().item(),edge_text)
-                    
-                    # Full graph
-                    if batch_label[i].item() == 1:
-                        full_node_colors[src] = "red"
-                    else:
-                        full_node_colors[src] = "blue"
-                    full_node_colors[dst] = "black"
-
-                    full_node_labels[src] = list(attack_type_vocab.keys())[batch_attack[mask][i]]
-                    nx_full_graph.add_edge(src, dst, label=edge_text, color=color, loss=loss)
-
-                    # Subgraph with selected attack type
-                    if batch_attack[mask][i] == selected_attack:
-                        if batch_label[i].item() == 1:
-                            node_colors[src] = "red"
-                        else:
-                            node_colors[src] = "blue"
-                        node_colors[dst] = "black"
-                        node_labels[src] = list(attack_type_vocab.keys())[batch_attack[mask][i]] 
-                        
-                        nx_graph.add_edge(src, dst, label=edge_text, color=color, loss=loss)
-                    
-                local_labels.append(edge_text)
-                local_procedures.append(batch_attack[mask][i])
-                evaluate_losses.append(loss)
-                
-            save_dir = f'./figures/{model_name}/{expe_name}'
-            os.makedirs(f'./figures/{model_name}/{expe_name}', exist_ok=True)
-
-            evaluate_idx_data_loader_tqdm.set_description(f'evaluate for the {batch_idx + 1}-th batch, evaluate loss: {loss}, {len(attack_counters)}/{len(attack_type_vocab)} attack types')
             
-            if attack_counters[selected_attack] < 3:
-                plot_graph_with_loss(nx_graph, node_colors, node_labels, save_dir + f'/{selected_attack_label}_{attack_counters[selected_attack]}.png')
-                plot_graph_with_loss(nx_full_graph, full_node_colors, full_node_labels, save_dir + f'/{selected_attack_label}_{attack_counters[selected_attack]}_full.png')
+            
+
+            # for i in range(len(prediction)):
+                                
+            #     src = batch_src_node_ids[mask][i].item()
+            #     dst = batch_dst_node_ids[mask][i].item()
+
+            #     if attack_counters[selected_attack] < 3:
+                    
+            #         # edge_text = list(feature_vocab.keys())[original_msg[i].argmax().item()]
+            #         edge_text = ""
+
+            #         truth = torch.tensor(batch_label[i], dtype=torch.float32)
+            #         loss  = loss_func(prediction[i], truth).item()
+            #         color = cmap(prediction[i])
+                    
+            #         # if attack_counters[selected_attack] == 1 and selected_attack_label == "restart":
+            #         #     print(i,src,dst,batch_edge_ids[i],original_msg[i].argmax().item(),edge_text)
+                    
+            #         # Full graph
+            #         if batch_label[i].item() == 1:
+            #             full_node_colors[src] = "red"
+            #         else:
+            #             full_node_colors[src] = "blue"
+            #         full_node_colors[dst] = "black"
+
+            #         full_node_labels[src] = list(attack_type_vocab.keys())[batch_attack[mask][i]]
+            #         nx_full_graph.add_edge(src, dst, label=edge_text, color=color, loss=loss)
+
+            #         # Subgraph with selected attack type
+            #         if batch_attack[mask][i] == selected_attack:
+            #             if batch_label[i].item() == 1:
+            #                 node_colors[src] = "red"
+            #             else:
+            #                 node_colors[src] = "blue"
+            #             node_colors[dst] = "black"
+            #             node_labels[src] = list(attack_type_vocab.keys())[batch_attack[mask][i]] 
+                        
+            #             nx_graph.add_edge(src, dst, label=edge_text, color=color, loss=loss)
+                    
+            #     local_labels.append(edge_text)
+            #     local_procedures.append(batch_attack[mask][i])
+            #     evaluate_losses.append(loss)
+                
+            # save_dir = f'./figures/{model_name}/{expe_name}'
+            # os.makedirs(f'./figures/{model_name}/{expe_name}', exist_ok=True)
+
+            # evaluate_idx_data_loader_tqdm.set_description(f'evaluate for the {batch_idx + 1}-th batch, evaluate loss: {loss}, {len(attack_counters)}/{len(attack_type_vocab)} attack types')
+            
+            # if attack_counters[selected_attack] < 3:
+            #     plot_graph_with_loss(nx_graph, node_colors, node_labels, save_dir + f'/{selected_attack_label}_{attack_counters[selected_attack]}.png')
+            #     plot_graph_with_loss(nx_full_graph, full_node_colors, full_node_labels, save_dir + f'/{selected_attack_label}_{attack_counters[selected_attack]}_full.png')
                 #pca_loss(local_embeddings, local_labels, local_procedures, save_dir.replace('.png', '_pca.png'))
 
     all_preds = torch.cat(all_preds).numpy()
     all_labels = torch.cat(all_labels).numpy()
     all_attacks = torch.cat(all_attacks).numpy()
     
-    info_to_export = {
-        "global": {
-            "cm" : confusion_matrix(all_labels, all_preds).tolist(),
-            "accuracy": accuracy_score(all_labels, all_preds),
-            "precision": precision_score(all_labels, all_preds),
-            "recall": recall_score(all_labels, all_preds),
-            "f1_score": f1_score(all_labels, all_preds),
-        }   
-    }
-    
-    for att_type in np.unique(all_attacks):
-        mask   = (all_attacks == att_type)
-        labels = all_labels[mask]
-        preds  = all_preds[mask]
-        
-        attack_name = list(attack_type_vocab.keys())[att_type]
-        info_to_export[attack_name] = {
-            "cm" : confusion_matrix(labels, preds).tolist(),
-            "accuracy": accuracy_score(labels, preds),
-            "precision": precision_score(labels, preds),
-            "recall": recall_score(labels, preds),
-            "f1_score": f1_score(labels, preds),
-        }
-
     os.makedirs(f'./eval/{model_name}/{expe_name}', exist_ok=True)
-    json.dump(info_to_export, open(f'./eval/{model_name}/{expe_name}/confusion_matrix.json', 'w'))
+    np.save(f'./eval/{model_name}/{expe_name}/all_labels', np.array(all_labels))
+    np.save(f'./eval/{model_name}/{expe_name}/all_preds', np.array(all_preds))
+    
+    # info_to_export = {
+    #     "global": {
+    #         "cm" : confusion_matrix(all_labels, all_preds).tolist(),
+    #         "accuracy": accuracy_score(all_labels, all_preds),
+    #         "precision": precision_score(all_labels, all_preds),
+    #         "recall": recall_score(all_labels, all_preds),
+    #         "f1_score": f1_score(all_labels, all_preds),
+    #     }   
+    # }
+    
+    # for att_type in np.unique(all_attacks):
+    #     mask   = (all_attacks == att_type)
+    #     labels = all_labels[mask]
+    #     preds  = all_preds[mask]
+        
+    #     attack_name = list(attack_type_vocab.keys())[att_type]
+    #     info_to_export[attack_name] = {
+    #         "cm" : confusion_matrix(labels, preds).tolist(),
+    #         "accuracy": accuracy_score(labels, preds),
+    #         "precision": precision_score(labels, preds),
+    #         "recall": recall_score(labels, preds),
+    #         "f1_score": f1_score(labels, preds),
+    #     }
+
+    # os.makedirs(f'./eval/{model_name}/{expe_name}', exist_ok=True)
+    # json.dump(info_to_export, open(f'./eval/{model_name}/{expe_name}/confusion_matrix.json', 'w'))
 
     # os.makedirs('./losses', exist_ok=True)
     # np.save(f'./losses/{model_name}.npy', np.array(evaluate_losses))
@@ -557,6 +563,7 @@ def evaluate_model_link_prediction(model_name: str, expe_name: str, model: nn.Mo
     # os.makedirs('./embeddings', exist_ok=True)
     # np.save(f'./embeddings/{model_name}.npy', np.array(evaluate_embeddings)) 
       
+    return None, None
     return evaluate_losses, evaluate_metrics
 
 def evaluate_model_node_classification(model_name: str, model: nn.Module, neighbor_sampler: NeighborSampler, evaluate_idx_data_loader: DataLoader,

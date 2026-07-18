@@ -133,13 +133,14 @@ if __name__ == "__main__":
         model[0].set_neighbor_sampler(test_neighbor_sampler)
 
     save_model_folder = f"./saved_models/{args.model_name}/{args.dataset_name}/{args.expe_name}/"
-    version = -1 
-    for filename in os.listdir(save_model_folder):
-        version = max(version, int(filename.split(".")[0][-1]))
+    version = 1
+    # for filename in os.listdir(save_model_folder):
+    #     version = max(version, int(filename.split(".")[0][-1]))
     
-    model.load_state_dict(torch.load(save_model_folder + f"model_{version}.pkl", map_location='cpu'))
-    if args.model_name in ['JODIE', 'DyRep', 'TGN']:
-        model[0].memory_bank.node_raw_messages = torch.load(save_model_folder + f"nonparametric_{version}.pkl", map_location='cpu', weights_only=False)
+    if version > 0:
+        model.load_state_dict(torch.load(save_model_folder + f"model_{version}.pkl", map_location='cpu'))
+        if args.model_name in ['JODIE', 'DyRep', 'TGN']:
+            model[0].memory_bank.node_raw_messages = torch.load(save_model_folder + f"nonparametric_{version}.pkl", map_location='cpu', weights_only=False)
 
     evaluate_model_link_prediction(
         model_name=args.model_name,
