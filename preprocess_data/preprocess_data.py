@@ -11,12 +11,16 @@ from tqdm import tqdm
 import fasttext
 # from transformers import AutoTokenizer, AutoModel
 
-# nlp_model_path = "../nlp/fasttext.bin"
-nlp_model_path = "../nlp/cc.en.300.bin"
+nlp_model_path = "../nlp/fasttext.bin"
+# nlp_model_path = "../nlp/cc.en.300.bin"
 fasttext_model = fasttext.load_model(nlp_model_path)
 
+# nlp_model_path = "albert-base-v2"
 # nlp_model_path = "distilbert-base-uncased"
-# # nlp_model_path = "../nlp/bert_finetuned/"
+# nlp_model_path = "bert-base-uncased"
+
+
+# nlp_model_path = "../nlp/bert_finetuned/"
 # tokenizer = AutoTokenizer.from_pretrained(nlp_model_path)
 # bert = AutoModel.from_pretrained(nlp_model_path)
 
@@ -75,6 +79,8 @@ def preprocess(dataset_name: str):
             idx_list.append(idx+1)
 
             # feat = F.one_hot(torch.tensor(int(e[4])), num_classes=len(feature_vocab)).float()
+            # feat = F.one_hot(torch.tensor(1), num_classes=len(feature_vocab)).float()
+
             feat = fasttext_model.get_word_vector(e[4])
             # feat = get_bert_embedding(e[4])
             feat_l.append(feat)
