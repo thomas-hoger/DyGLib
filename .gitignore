@@ -5,6 +5,9 @@ embeddings/*
 losses/*
 old/*
 saved_models_copy/*
+*.sh
+eval/
+nlp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
