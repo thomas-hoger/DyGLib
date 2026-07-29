@@ -297,6 +297,8 @@ if __name__ == "__main__":
 
             logger.info(f'Epoch: {epoch + 1}, learning rate: {optimizer.param_groups[0]["lr"]}, train loss: {np.mean(train_losses)}')
             
+            start = time.perf_counter()
+
             val_losses, val_metrics = evaluate_model_link_prediction(
                 model_name=args.model_name, 
                 model=model,
@@ -309,6 +311,9 @@ if __name__ == "__main__":
                 time_gap=args.time_gap,
                 supervised=args.supervised
             )
+            
+            end  = time.perf_counter()
+            val_metrics["exec_duration"] = end-start//60
             
             logger.info(f'validate loss: {np.mean(val_losses)}')
             
