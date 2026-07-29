@@ -14,10 +14,25 @@ from utils.metrics import get_link_prediction_metrics, get_node_classification_m
 from utils.utils import set_random_seed
 from utils.utils import NegativeEdgeSampler, NeighborSampler
 from utils.DataLoader import Data
+from sklearn.metrics import roc_curve
 
+import matplotlib.pyplot as plt
+
+def plot_roc(fpr, tpr, auc, path):
+    plt.figure(figsize=(8, 5))
+    plt.plot(fpr,tpr,lw=2, label=f"(AUC = {auc:.3f})")
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel("False Positive Rate (FPR)")
+    plt.ylabel("True Positive Rate (TPR)")
+    plt.title("ROC Curves")
+    plt.grid(True)
+    plt.legend(loc="lower right")
+    plt.tight_layout()
+    plt.savefig(path, dpi=300, bbox_inches="tight")
 
 def evaluate_model_link_prediction(model_name: str, model: nn.Module, neighbor_sampler: NeighborSampler, evaluate_idx_data_loader: DataLoader,
-                                   evaluate_neg_edge_sampler: NegativeEdgeSampler, evaluate_data: Data, loss_func: nn.Module,
+                                   evaluate_neg_edge_sampler: NegativeEdgeSampler, evaluate_data: Data, loss_func: nn.Module, supervised: bool,
                                    num_neighbors: int = 20, time_gap: int = 2000):
     """
     evaluate models on the link prediction task
@@ -45,22 +60,26 @@ def evaluate_model_link_prediction(model_name: str, model: nn.Module, neighbor_s
     with torch.no_grad():
         # store evaluate losses and metrics
         evaluate_losses, evaluate_metrics = [], []
+        evaluate_predicts, evaluate_labels = [], []
+        
         evaluate_idx_data_loader_tqdm = tqdm(evaluate_idx_data_loader, ncols=120)
         for batch_idx, evaluate_data_indices in enumerate(evaluate_idx_data_loader_tqdm):
             evaluate_data_indices = evaluate_data_indices.numpy()
-            batch_src_node_ids, batch_dst_node_ids, batch_node_interact_times, batch_edge_ids = \
+            batch_src_node_ids, batch_dst_node_ids, batch_node_interact_times, batch_edge_ids, batch_labels = \
                 evaluate_data.src_node_ids[evaluate_data_indices],  evaluate_data.dst_node_ids[evaluate_data_indices], \
-                evaluate_data.node_interact_times[evaluate_data_indices], evaluate_data.edge_ids[evaluate_data_indices]
+                evaluate_data.node_interact_times[evaluate_data_indices], evaluate_data.edge_ids[evaluate_data_indices], evaluate_data.labels[evaluate_data_indices]
 
-            if evaluate_neg_edge_sampler.negative_sample_strategy != 'random':
-                batch_neg_src_node_ids, batch_neg_dst_node_ids = evaluate_neg_edge_sampler.sample(size=len(batch_src_node_ids),
-                                                                                                  batch_src_node_ids=batch_src_node_ids,
-                                                                                                  batch_dst_node_ids=batch_dst_node_ids,
-                                                                                                  current_batch_start_time=batch_node_interact_times[0],
-                                                                                                  current_batch_end_time=batch_node_interact_times[-1])
-            else:
-                _, batch_neg_dst_node_ids = evaluate_neg_edge_sampler.sample(size=len(batch_src_node_ids))
-                batch_neg_src_node_ids = batch_src_node_ids
+            if not supervised:
+
+                if evaluate_neg_edge_sampler.negative_sample_strategy != 'random':
+                    batch_neg_src_node_ids, batch_neg_dst_node_ids = evaluate_neg_edge_sampler.sample(size=len(batch_src_node_ids),
+                                                                                                    batch_src_node_ids=batch_src_node_ids,
+                                                                                                    batch_dst_node_ids=batch_dst_node_ids,
+                                                                                                    current_batch_start_time=batch_node_interact_times[0],
+                                                                                                    current_batch_end_time=batch_node_interact_times[-1])
+                else:
+                    _, batch_neg_dst_node_ids = evaluate_neg_edge_sampler.sample(size=len(batch_src_node_ids))
+                    batch_neg_src_node_ids = batch_src_node_ids
 
             # we need to compute for positive and negative edges respectively, because the new sampling strategy (for evaluation) allows the negative source nodes to be
             # different from the source nodes, this is different from previous works that just replace destination nodes with negative destination nodes
@@ -72,26 +91,18 @@ def evaluate_model_link_prediction(model_name: str, model: nn.Module, neighbor_s
                                                                       dst_node_ids=batch_dst_node_ids,
                                                                       node_interact_times=batch_node_interact_times,
                                                                       num_neighbors=num_neighbors)
-
-                # get temporal embedding of negative source and negative destination nodes
-                # two Tensors, with shape (batch_size, node_feat_dim)
-                batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
-                    model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
-                                                                      dst_node_ids=batch_neg_dst_node_ids,
-                                                                      node_interact_times=batch_node_interact_times,
-                                                                      num_neighbors=num_neighbors)
+                
+                if not supervised:
+                    # get temporal embedding of negative source and negative destination nodes
+                    # two Tensors, with shape (batch_size, node_feat_dim)
+                    batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
+                        model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
+                                                                        dst_node_ids=batch_neg_dst_node_ids,
+                                                                        node_interact_times=batch_node_interact_times,
+                                                                        num_neighbors=num_neighbors)
             elif model_name in ['JODIE', 'DyRep', 'TGN']:
                 # note that negative nodes do not change the memories while the positive nodes change the memories,
                 # we need to first compute the embeddings of negative nodes for memory-based models
-                # get temporal embedding of negative source and negative destination nodes
-                # two Tensors, with shape (batch_size, node_feat_dim)
-                batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
-                    model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
-                                                                      dst_node_ids=batch_neg_dst_node_ids,
-                                                                      node_interact_times=batch_node_interact_times,
-                                                                      edge_ids=None,
-                                                                      edges_are_positive=False,
-                                                                      num_neighbors=num_neighbors)
 
                 # get temporal embedding of source and destination nodes
                 # two Tensors, with shape (batch_size, node_feat_dim)
@@ -102,6 +113,17 @@ def evaluate_model_link_prediction(model_name: str, model: nn.Module, neighbor_s
                                                                       edge_ids=batch_edge_ids,
                                                                       edges_are_positive=True,
                                                                       num_neighbors=num_neighbors)
+                
+                if not supervised:
+                    # get temporal embedding of negative source and negative destination nodes
+                    # two Tensors, with shape (batch_size, node_feat_dim)
+                    batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
+                        model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
+                                                                        dst_node_ids=batch_neg_dst_node_ids,
+                                                                        node_interact_times=batch_node_interact_times,
+                                                                        edge_ids=None,
+                                                                        edges_are_positive=False,
+                                                                        num_neighbors=num_neighbors)
             elif model_name in ['GraphMixer']:
                 # get temporal embedding of source and destination nodes
                 # two Tensors, with shape (batch_size, node_feat_dim)
@@ -112,14 +134,15 @@ def evaluate_model_link_prediction(model_name: str, model: nn.Module, neighbor_s
                                                                       num_neighbors=num_neighbors,
                                                                       time_gap=time_gap)
 
-                # get temporal embedding of negative source and negative destination nodes
-                # two Tensors, with shape (batch_size, node_feat_dim)
-                batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
-                    model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
-                                                                      dst_node_ids=batch_neg_dst_node_ids,
-                                                                      node_interact_times=batch_node_interact_times,
-                                                                      num_neighbors=num_neighbors,
-                                                                      time_gap=time_gap)
+                if not supervised:
+                    # get temporal embedding of negative source and negative destination nodes
+                    # two Tensors, with shape (batch_size, node_feat_dim)
+                    batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
+                        model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
+                                                                        dst_node_ids=batch_neg_dst_node_ids,
+                                                                        node_interact_times=batch_node_interact_times,
+                                                                        num_neighbors=num_neighbors,
+                                                                        time_gap=time_gap)
             elif model_name in ['DyGFormer']:
                 # get temporal embedding of source and destination nodes
                 # two Tensors, with shape (batch_size, node_feat_dim)
@@ -128,30 +151,45 @@ def evaluate_model_link_prediction(model_name: str, model: nn.Module, neighbor_s
                                                                       dst_node_ids=batch_dst_node_ids,
                                                                       node_interact_times=batch_node_interact_times)
 
-                # get temporal embedding of negative source and negative destination nodes
-                # two Tensors, with shape (batch_size, node_feat_dim)
-                batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
-                    model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
-                                                                      dst_node_ids=batch_neg_dst_node_ids,
-                                                                      node_interact_times=batch_node_interact_times)
+                if not supervised:
+                    # get temporal embedding of negative source and negative destination nodes
+                    # two Tensors, with shape (batch_size, node_feat_dim)
+                    batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
+                        model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
+                                                                        dst_node_ids=batch_neg_dst_node_ids,
+                                                                        node_interact_times=batch_node_interact_times)
             else:
                 raise ValueError(f"Wrong value for model_name {model_name}!")
-            # get positive and negative probabilities, shape (batch_size, )
-            positive_probabilities = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
-            negative_probabilities = model[1](input_1=batch_neg_src_node_embeddings, input_2=batch_neg_dst_node_embeddings).squeeze(dim=-1).sigmoid()
+            
+            if supervised:
+                mask     = batch_labels != -1
+                predicts = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
+                labels   = torch.Tensor(batch_labels)[mask]
+                predicts = predicts[mask]
+                
+            else : 
+                # get positive and negative probabilities, shape (batch_size, )
+                positive_probabilities = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
+                negative_probabilities = model[1](input_1=batch_neg_src_node_embeddings, input_2=batch_neg_dst_node_embeddings).squeeze(dim=-1).sigmoid()
+                predicts = torch.cat([positive_probabilities, negative_probabilities], dim=0)
+                labels = torch.cat([torch.ones_like(positive_probabilities), torch.zeros_like(negative_probabilities)], dim=0)
 
-            predicts = torch.cat([positive_probabilities, negative_probabilities], dim=0)
-            labels = torch.cat([torch.ones_like(positive_probabilities), torch.zeros_like(negative_probabilities)], dim=0)
+            if len(labels) > 0:
 
-            loss = loss_func(input=predicts, target=labels)
+                loss = loss_func(input=predicts, target=labels)
 
-            evaluate_losses.append(loss.item())
+                evaluate_losses.append(loss.item())
 
-            evaluate_metrics.append(get_link_prediction_metrics(predicts=predicts, labels=labels))
-
-            evaluate_idx_data_loader_tqdm.set_description(f'evaluate for the {batch_idx + 1}-th batch, evaluate loss: {loss.item()}')
-
-    return evaluate_losses, evaluate_metrics
+                evaluate_predicts.append(predicts)
+                evaluate_labels.append(labels)
+                evaluate_idx_data_loader_tqdm.set_description(f'evaluate for the {batch_idx + 1}-th batch, evaluate loss: {loss.item()}')
+ 
+                #if batch_idx>100:break
+  
+    evaluate_predicts = torch.cat(evaluate_predicts)
+    evaluate_labels = torch.cat(evaluate_labels)
+    
+    return evaluate_losses, get_link_prediction_metrics(predicts=evaluate_predicts, labels=evaluate_labels)
 
 
 def evaluate_model_node_classification(model_name: str, model: nn.Module, neighbor_sampler: NeighborSampler, evaluate_idx_data_loader: DataLoader,
