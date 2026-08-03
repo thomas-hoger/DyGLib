@@ -210,7 +210,7 @@ def evaluate_model(model_name: str, model: nn.Module, neighbor_sampler: Neighbor
             evaluate_losses.append(loss.item())
             evaluate_idx_data_loader_tqdm.set_description(f'evaluate for the {batch_idx + 1}-th batch, evaluate loss: {loss.item()}')
   
-            if batch_idx>100:break
+            # if batch_idx>100:break
   
     evaluate_predicts = torch.cat(evaluate_predicts)
     evaluate_labels = torch.cat(evaluate_labels)

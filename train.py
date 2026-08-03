@@ -280,7 +280,7 @@ if __name__ == "__main__":
                     loss.backward()
                     optimizer.step()
                     
-                if batch_idx>100:break
+                # if batch_idx>100:break
                 
                 train_idx_data_loader_tqdm.set_description(f'Epoch: {epoch + 1}, train for the {batch_idx + 1}-th batch, train loss: {loss.item()}')
 
