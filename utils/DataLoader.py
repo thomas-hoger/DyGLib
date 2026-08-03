@@ -190,7 +190,7 @@ def get_link_prediction_data(dataset_name: str, val_ratio: float, test_ratio: fl
             packet_id=packet_ids_test,
             attack_type=attack_type_test
         )
-
+        
         # for train data, we keep edges happening before the validation time which do not involve any new node, used for inductiveness
         train_mask = np.arange(len(src_node_ids)) <= int((1-val_ratio) * len(src_node_ids))
 

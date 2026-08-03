@@ -19,8 +19,7 @@ from models.DyGFormer import DyGFormer
 from models.modules import MergeLayer
 from utils.utils import set_random_seed, convert_to_gpu, get_parameter_sizes, create_optimizer
 from utils.utils import get_neighbor_sampler, NegativeEdgeSampler
-from evaluate_models_utils import evaluate_model_link_prediction, plot_roc
-from utils.metrics import get_link_prediction_metrics
+from evaluate_models_utils import evaluate_model, plot_roc
 from utils.DataLoader import get_idx_data_loader, get_link_prediction_data
 from utils.EarlyStopping import EarlyStopping
 import matplotlib.pyplot as plt
@@ -46,12 +45,13 @@ if __name__ == "__main__":
     full_neighbor_sampler = get_neighbor_sampler(data=full_data, sample_neighbor_strategy=args.sample_neighbor_strategy,
                                                  time_scaling_factor=args.time_scaling_factor, seed=1)
 
-    # initialize negative samplers, set seeds for validation and testing so negatives are the same across different runs
-    # in the inductive setting, negatives are sampled only amongst other new nodes
-    # train negative edge sampler does not need to specify the seed, but evaluation samplers need to do so
-    train_neg_edge_sampler = NegativeEdgeSampler(src_node_ids=train_data.src_node_ids, dst_node_ids=train_data.dst_node_ids)
-    val_neg_edge_sampler = NegativeEdgeSampler(src_node_ids=full_data.src_node_ids, dst_node_ids=full_data.dst_node_ids, seed=0)
-    test_neg_edge_sampler = NegativeEdgeSampler(src_node_ids=full_data.src_node_ids, dst_node_ids=full_data.dst_node_ids, seed=2)
+    if args.link_pred and not args.supervised:
+        # initialize negative samplers, set seeds for validation and testing so negatives are the same across different runs
+        # in the inductive setting, negatives are sampled only amongst other new nodes
+        # train negative edge sampler does not need to specify the seed, but evaluation samplers need to do so
+        train_neg_edge_sampler = NegativeEdgeSampler(src_node_ids=train_data.src_node_ids, dst_node_ids=train_data.dst_node_ids)
+        val_neg_edge_sampler = NegativeEdgeSampler(src_node_ids=full_data.src_node_ids, dst_node_ids=full_data.dst_node_ids, seed=0)
+        test_neg_edge_sampler = NegativeEdgeSampler(src_node_ids=full_data.src_node_ids, dst_node_ids=full_data.dst_node_ids, seed=2)
 
     # get data loaders
     train_idx_data_loader = get_idx_data_loader(indices_list=list(range(len(train_data.src_node_ids))), batch_size=args.batch_size, shuffle=False)
@@ -121,15 +121,22 @@ if __name__ == "__main__":
                                          max_input_sequence_length=args.max_input_sequence_length, device=args.device)
         else:
             raise ValueError(f"Wrong value for model_name {args.model_name}!")
-        link_predictor = MergeLayer(input_dim1=node_raw_features.shape[1], input_dim2=node_raw_features.shape[1],
-                                    hidden_dim=node_raw_features.shape[1], output_dim=1)
+        
+        if args.link_pred:
+            link_predictor = MergeLayer(input_dim1=node_raw_features.shape[1], input_dim2=node_raw_features.shape[1],
+                                        hidden_dim=node_raw_features.shape[1], output_dim=1)
+            loss_func = nn.BCELoss()
+        else:
+            link_predictor = MergeLayer(input_dim1=node_raw_features.shape[1], input_dim2=node_raw_features.shape[1],
+                                        hidden_dim=node_raw_features.shape[1], output_dim=node_raw_features.shape[1])
+            loss_func = nn.MSELoss()
+        
         model = nn.Sequential(dynamic_backbone, link_predictor)
         logger.info(f'model -> {model}')
         logger.info(f'model name: {args.model_name}, #parameters: {get_parameter_sizes(model) * 4} B, '
                     f'{get_parameter_sizes(model) * 4 / 1024} KB, {get_parameter_sizes(model) * 4 / 1024 / 1024} MB.')
 
         optimizer = create_optimizer(model=model, optimizer_name=args.optimizer, learning_rate=args.learning_rate, weight_decay=args.weight_decay)
-
         model = convert_to_gpu(model, device=args.device)
 
         save_model_folder = f"./saved_models/{args.model_name}/{args.dataset_name}/{args.expe_name}/"
@@ -149,8 +156,6 @@ if __name__ == "__main__":
 
         early_stopping = EarlyStopping(patience=args.patience, save_model_folder=save_model_folder,
                                        save_model_name=args.save_model_name, logger=logger, model_name=args.model_name)
-
-        loss_func = nn.BCELoss()
 
         for epoch in range(args.num_epochs):
             
@@ -187,7 +192,7 @@ if __name__ == "__main__":
                                                                           node_interact_times=batch_node_interact_times,
                                                                           num_neighbors=args.num_neighbors)
 
-                    if not args.supervised:
+                    if not args.supervised and args.link_pred:
                         batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
                             model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
                                                                             dst_node_ids=batch_neg_dst_node_ids,
@@ -204,7 +209,7 @@ if __name__ == "__main__":
                                                                           edge_ids=batch_edge_ids,
                                                                           edges_are_positive=True,
                                                                           num_neighbors=args.num_neighbors)
-                    if not args.supervised:
+                    if not args.supervised and args.link_pred:
                         batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
                             model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
                                                                             dst_node_ids=batch_neg_dst_node_ids,
@@ -221,7 +226,7 @@ if __name__ == "__main__":
                                                                           node_interact_times=batch_node_interact_times,
                                                                           num_neighbors=args.num_neighbors,
                                                                           time_gap=args.time_gap)
-                    if not args.supervised:
+                    if not args.supervised and args.link_pred:
                         batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
                             model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
                                                                             dst_node_ids=batch_neg_dst_node_ids,
@@ -235,7 +240,7 @@ if __name__ == "__main__":
                         model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_src_node_ids,
                                                                           dst_node_ids=batch_dst_node_ids,
                                                                           node_interact_times=batch_node_interact_times)
-                    if not args.supervised:
+                    if not args.supervised and args.link_pred:
                         batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
                             model[0].compute_src_dst_node_temporal_embeddings(src_node_ids=batch_neg_src_node_ids,
                                                                             dst_node_ids=batch_neg_dst_node_ids,
@@ -244,17 +249,24 @@ if __name__ == "__main__":
                     raise ValueError(f"Wrong value for model_name {args.model_name}!")
                 # get positive and negative probabilities, shape (batch_size, )
                 
+                # Link pred supervised
                 if args.supervised:
                     mask     = batch_labels != -1
                     predicts = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
                     labels   = torch.Tensor(batch_labels)[mask]
                     predicts = predicts[mask]
                     
-                else : 
+                # Link pred unsupervised
+                elif args.link_pred : 
                     positive_probabilities = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
                     negative_probabilities = model[1](input_1=batch_neg_src_node_embeddings, input_2=batch_neg_dst_node_embeddings).squeeze(dim=-1).sigmoid()
                     predicts = torch.cat([positive_probabilities, negative_probabilities], dim=0)
                     labels = torch.cat([torch.ones_like(positive_probabilities), torch.zeros_like(negative_probabilities)], dim=0)
+                    
+                # Autoencoder unsupervised
+                else : 
+                    predicts = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
+                    labels   = model[0].edge_raw_features[batch_edge_ids]
 
                 if len(labels) > 0:
 
@@ -268,7 +280,7 @@ if __name__ == "__main__":
                     loss.backward()
                     optimizer.step()
                     
-                # if batch_idx>100:break
+                if batch_idx>100:break
                 
                 train_idx_data_loader_tqdm.set_description(f'Epoch: {epoch + 1}, train for the {batch_idx + 1}-th batch, train loss: {loss.item()}')
 
@@ -299,7 +311,7 @@ if __name__ == "__main__":
             
             start = time.perf_counter()
 
-            val_losses, val_metrics = evaluate_model_link_prediction(
+            val_losses, val_metrics = evaluate_model(
                 model_name=args.model_name, 
                 model=model,
                 neighbor_sampler=full_neighbor_sampler,
@@ -309,7 +321,9 @@ if __name__ == "__main__":
                 loss_func=loss_func,
                 num_neighbors=args.num_neighbors,
                 time_gap=args.time_gap,
-                supervised=args.supervised
+                link_pred=args.link_pred,
+                supervised=args.supervised,
+                test=False
             )
             
             end  = time.perf_counter()
@@ -322,12 +336,14 @@ if __name__ == "__main__":
                     logger.info(f'validate {metric_name}, {val_metrics[metric_name]}')
 
             json.dump(val_metrics, open(os.path.join(save_model_folder, f"val_metrics_{epoch + 1}.json"), 'w'))
-            plot_roc(
-                val_metrics['roc']['fpr'],
-                val_metrics['roc']['tpr'],
-                val_metrics['roc_auc'],
-                os.path.join(save_model_folder, f"val_roc_{epoch + 1}.png")
-            )
+            
+            if args.link_pred:
+                plot_roc(
+                    val_metrics['roc']['fpr'],
+                    val_metrics['roc']['tpr'],
+                    val_metrics['roc_auc'],
+                    os.path.join(save_model_folder, f"val_roc_{epoch + 1}.png")
+                )
             
             if args.model_name in ['JODIE', 'DyRep', 'TGN']:
                 # backup memory bank after validating so it can be used for testing nodes (since test edges are strictly later in time than validation edges)
@@ -335,7 +351,7 @@ if __name__ == "__main__":
 
             # perform testing once after test_interval_epochs
             if (epoch + 1) % args.test_interval_epochs == 0:
-                test_losses, test_metrics = evaluate_model_link_prediction(
+                test_losses, test_metrics = evaluate_model(
                     model_name=args.model_name,
                     model=model,
                     neighbor_sampler=full_neighbor_sampler,
@@ -345,7 +361,9 @@ if __name__ == "__main__":
                     loss_func=loss_func,
                     num_neighbors=args.num_neighbors,
                     time_gap=args.time_gap,
-                    supervised=args.supervised
+                    link_pred=args.link_pred,
+                    supervised=args.supervised,
+                    test=True
                 )
 
                 if args.model_name in ['JODIE', 'DyRep', 'TGN']:

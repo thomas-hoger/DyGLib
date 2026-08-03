@@ -10,11 +10,12 @@ import os
 import json
 
 from models.EdgeBank import edge_bank_link_prediction
-from utils.metrics import get_link_prediction_metrics, get_node_classification_metrics
+from utils.metrics import get_autoencoder_metrics, get_link_prediction_metrics, get_node_classification_metrics
 from utils.utils import set_random_seed
 from utils.utils import NegativeEdgeSampler, NeighborSampler
 from utils.DataLoader import Data
 from sklearn.metrics import roc_curve
+import torch.nn.functional as F
 
 import matplotlib.pyplot as plt
 
@@ -31,9 +32,9 @@ def plot_roc(fpr, tpr, auc, path):
     plt.tight_layout()
     plt.savefig(path, dpi=300, bbox_inches="tight")
 
-def evaluate_model_link_prediction(model_name: str, model: nn.Module, neighbor_sampler: NeighborSampler, evaluate_idx_data_loader: DataLoader,
-                                   evaluate_neg_edge_sampler: NegativeEdgeSampler, evaluate_data: Data, loss_func: nn.Module, supervised: bool,
-                                   num_neighbors: int = 20, time_gap: int = 2000):
+def evaluate_model(model_name: str, model: nn.Module, neighbor_sampler: NeighborSampler, evaluate_idx_data_loader: DataLoader,
+                    evaluate_neg_edge_sampler: NegativeEdgeSampler, evaluate_data: Data, loss_func: nn.Module, supervised: bool, link_pred: bool, test:bool,
+                    num_neighbors: int = 20, time_gap: int = 2000):
     """
     evaluate models on the link prediction task
     :param model_name: str, name of the model
@@ -69,7 +70,7 @@ def evaluate_model_link_prediction(model_name: str, model: nn.Module, neighbor_s
                 evaluate_data.src_node_ids[evaluate_data_indices],  evaluate_data.dst_node_ids[evaluate_data_indices], \
                 evaluate_data.node_interact_times[evaluate_data_indices], evaluate_data.edge_ids[evaluate_data_indices], evaluate_data.labels[evaluate_data_indices]
 
-            if not supervised:
+            if not supervised and not test:
 
                 if evaluate_neg_edge_sampler.negative_sample_strategy != 'random':
                     batch_neg_src_node_ids, batch_neg_dst_node_ids = evaluate_neg_edge_sampler.sample(size=len(batch_src_node_ids),
@@ -91,8 +92,8 @@ def evaluate_model_link_prediction(model_name: str, model: nn.Module, neighbor_s
                                                                       dst_node_ids=batch_dst_node_ids,
                                                                       node_interact_times=batch_node_interact_times,
                                                                       num_neighbors=num_neighbors)
-                
-                if not supervised:
+
+                if not supervised and not test:
                     # get temporal embedding of negative source and negative destination nodes
                     # two Tensors, with shape (batch_size, node_feat_dim)
                     batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
@@ -114,7 +115,7 @@ def evaluate_model_link_prediction(model_name: str, model: nn.Module, neighbor_s
                                                                       edges_are_positive=True,
                                                                       num_neighbors=num_neighbors)
                 
-                if not supervised:
+                if not supervised and not test:
                     # get temporal embedding of negative source and negative destination nodes
                     # two Tensors, with shape (batch_size, node_feat_dim)
                     batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
@@ -134,7 +135,7 @@ def evaluate_model_link_prediction(model_name: str, model: nn.Module, neighbor_s
                                                                       num_neighbors=num_neighbors,
                                                                       time_gap=time_gap)
 
-                if not supervised:
+                if not supervised and not test:
                     # get temporal embedding of negative source and negative destination nodes
                     # two Tensors, with shape (batch_size, node_feat_dim)
                     batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
@@ -151,7 +152,7 @@ def evaluate_model_link_prediction(model_name: str, model: nn.Module, neighbor_s
                                                                       dst_node_ids=batch_dst_node_ids,
                                                                       node_interact_times=batch_node_interact_times)
 
-                if not supervised:
+                if not supervised and not test:
                     # get temporal embedding of negative source and negative destination nodes
                     # two Tensors, with shape (batch_size, node_feat_dim)
                     batch_neg_src_node_embeddings, batch_neg_dst_node_embeddings = \
@@ -160,37 +161,69 @@ def evaluate_model_link_prediction(model_name: str, model: nn.Module, neighbor_s
                                                                         node_interact_times=batch_node_interact_times)
             else:
                 raise ValueError(f"Wrong value for model_name {model_name}!")
-            
-            if supervised:
-                mask     = batch_labels != -1
-                predicts = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
-                labels   = torch.Tensor(batch_labels)[mask]
-                predicts = predicts[mask]
+
+            if test :
                 
+                predicts = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
+                mask     = batch_labels != -1   
+                predicts = predicts[mask]
+                if len(predicts) > 0:
+                    ground_truth = torch.Tensor(batch_labels)
+                    evaluate_labels.append(ground_truth[mask])
+                
+                    if link_pred: 
+                        loss = loss_func(input=predicts, target=ground_truth[mask])
+                        evaluate_predicts.append(predicts)
+                        
+                    else : 
+                        labels = model[0].edge_raw_features[batch_edge_ids][mask]
+                        anomaly_score = 1 - F.cosine_similarity(predicts, labels, dim=1)
+                        
+                        loss = loss_func(input=predicts, target=labels)
+                        evaluate_predicts.append(anomaly_score)
+
             else : 
-                # get positive and negative probabilities, shape (batch_size, )
-                positive_probabilities = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
-                negative_probabilities = model[1](input_1=batch_neg_src_node_embeddings, input_2=batch_neg_dst_node_embeddings).squeeze(dim=-1).sigmoid()
-                predicts = torch.cat([positive_probabilities, negative_probabilities], dim=0)
-                labels = torch.cat([torch.ones_like(positive_probabilities), torch.zeros_like(negative_probabilities)], dim=0)
-
-            if len(labels) > 0:
-
+                
+                # Link pred supervised
+                if supervised:
+                    mask     = batch_labels != -1
+                    predicts = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
+                    labels   = torch.Tensor(batch_labels)[mask]
+                    predicts = predicts[mask]
+                    
+                # Link pred unsupervised
+                elif link_pred : 
+                    positive_probabilities = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
+                    negative_probabilities = model[1](input_1=batch_neg_src_node_embeddings, input_2=batch_neg_dst_node_embeddings).squeeze(dim=-1).sigmoid()
+                    predicts = torch.cat([positive_probabilities, negative_probabilities], dim=0)
+                    labels = torch.cat([torch.ones_like(positive_probabilities), torch.zeros_like(negative_probabilities)], dim=0)
+                    
+                # Autoencoder unsupervised
+                else : 
+                    predicts = model[1](input_1=batch_src_node_embeddings, input_2=batch_dst_node_embeddings).squeeze(dim=-1).sigmoid()
+                    labels   = model[0].edge_raw_features[batch_edge_ids]
+                    
                 loss = loss_func(input=predicts, target=labels)
-
-                evaluate_losses.append(loss.item())
-
                 evaluate_predicts.append(predicts)
                 evaluate_labels.append(labels)
-                evaluate_idx_data_loader_tqdm.set_description(f'evaluate for the {batch_idx + 1}-th batch, evaluate loss: {loss.item()}')
- 
-                #if batch_idx>100:break
+                
+            evaluate_losses.append(loss.item())
+            evaluate_idx_data_loader_tqdm.set_description(f'evaluate for the {batch_idx + 1}-th batch, evaluate loss: {loss.item()}')
+  
+            if batch_idx>100:break
   
     evaluate_predicts = torch.cat(evaluate_predicts)
     evaluate_labels = torch.cat(evaluate_labels)
     
-    return evaluate_losses, get_link_prediction_metrics(predicts=evaluate_predicts, labels=evaluate_labels)
+    if link_pred: 
+        metrics = get_link_prediction_metrics(predicts=evaluate_predicts, labels=evaluate_labels)
+    else : 
+        if test : 
+            metrics = get_autoencoder_metrics(predicts=evaluate_predicts, labels=evaluate_labels)
+        else : 
+            metrics = {}
 
+    return evaluate_losses, metrics
 
 def evaluate_model_node_classification(model_name: str, model: nn.Module, neighbor_sampler: NeighborSampler, evaluate_idx_data_loader: DataLoader,
                                        evaluate_data: Data, loss_func: nn.Module, num_neighbors: int = 20, time_gap: int = 2000):
