@@ -335,7 +335,7 @@ if __name__ == "__main__":
                 if metric_name != "roc":
                     logger.info(f'validate {metric_name}, {val_metrics[metric_name]}')
 
-            json.dump(val_metrics, open(os.path.join(save_model_folder, f"val_metrics_{epoch + 1}.json"), 'w'))
+            json.dump(val_metrics, open(os.path.join(save_model_folder, f"val_metrics_{epoch + 1}.json"), 'w'), indent=4)
             
             if args.link_pred:
                 plot_roc(
@@ -376,7 +376,7 @@ if __name__ == "__main__":
                     if metric_name != "roc":
                         logger.info(f'test {metric_name}, {test_metrics[metric_name]}')
                 
-                json.dump(test_metrics, open(os.path.join(save_model_folder, f"test_metrics_{epoch + 1}.json"), 'w'))
+                json.dump(test_metrics, open(os.path.join(save_model_folder, f"test_metrics_{epoch + 1}.json"), 'w'), indent=4)
                 plot_roc(
                     test_metrics["roc"]['fpr'],
                     test_metrics["roc"]['tpr'],

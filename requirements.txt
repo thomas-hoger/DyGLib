@@ -3,3 +3,5 @@ numpy
 pandas
 tqdm
 tabulate
+scikit-learn
+matplotlib

@@ -18,9 +18,14 @@ def get_link_prediction_metrics(predicts: torch.Tensor, labels: torch.Tensor):
     roc_auc = roc_auc_score(y_true=labels, y_score=predicts)
     fpr, tpr, threshold = roc_curve(y_true=labels, y_score=predicts)
     roc = {"fpr": fpr.tolist(), "tpr": tpr.tolist(), "threshold": threshold.tolist()}
-    cm = confusion_matrix(y_true=labels, y_pred=(predicts >= 0.5).astype(int)).tolist()
+    
+    tn, fp, fn, tp = cm = confusion_matrix(y_true=labels, y_pred=(predicts >= 0.5).astype(int)).ravel().tolist()
+    positives = tp + fn
+    negatives = tn + fp 
+    tpr = tp/positives
+    fpr = fp/negatives
 
-    return {'average_precision': average_precision, 'roc_auc': roc_auc, 'roc': roc, 'cm': cm}
+    return {'average_precision': average_precision, 'tpr': tpr, 'fpr': fpr, 'roc_auc': roc_auc, 'roc': roc, 'cm': cm}
 
 def get_autoencoder_metrics(predicts: torch.Tensor, labels: torch.Tensor):
     """
@@ -38,8 +43,14 @@ def get_autoencoder_metrics(predicts: torch.Tensor, labels: torch.Tensor):
     fpr, tpr, threshold = roc_curve(y_true=labels, y_score=predicts)
     roc = {"fpr": fpr.tolist(), "tpr": tpr.tolist(), "threshold": threshold.tolist()}
     cm = confusion_matrix(y_true=labels, y_pred=(predicts >= 0.5).astype(int)).tolist()
+    
+    tn, fp, fn, tp = cm = confusion_matrix(y_true=labels, y_pred=(predicts >= 0.5).astype(int)).ravel().tolist()
+    positives = tp + fn
+    negatives = tn + fp 
+    tpr = tp/positives
+    fpr = fp/negatives
 
-    return {'average_precision': average_precision, 'roc_auc': roc_auc, 'roc': roc, 'cm': cm}
+    return {'average_precision': average_precision, 'tpr': tpr, 'fpr': fpr, 'roc_auc': roc_auc, 'roc': roc, 'cm': cm}
 
 def get_node_classification_metrics(predicts: torch.Tensor, labels: torch.Tensor):
     """
