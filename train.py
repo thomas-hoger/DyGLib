@@ -146,13 +146,16 @@ if __name__ == "__main__":
         version = 0
         for filename in os.listdir(save_model_folder):
             split = filename.split(".")
-            if split[1] == "pkl" :   
-                version = max(version, int(split[0][-1]))
+            if split[1] == "pkl" : 
+                try :  
+                    version = max(version, int(split[0][-1]))
+                except :
+                    version = 0
         if version > 0:
             print(f"Version {version} found, loading previous save")
             model.load_state_dict(torch.load(save_model_folder + f"model_{version}.pkl", map_location='cpu'))
             if args.model_name in ['JODIE', 'DyRep', 'TGN']:
-                model[0].memory_bank.node_raw_messages = torch.load(save_model_folder + f"nonparametric_{version}.pkl", map_location='cpu', weights_only=False)
+                model[0].memory_bank.node_raw_messages = torch.load(save_model_folder + f"model_{version}_nonparametric_data.pkl", map_location='cpu', weights_only=False)
 
         early_stopping = EarlyStopping(patience=args.patience, save_model_folder=save_model_folder,
                                        save_model_name=args.save_model_name, logger=logger, model_name=args.model_name)
@@ -291,7 +294,7 @@ if __name__ == "__main__":
             # Save model            
             torch.save(model.state_dict(), os.path.join(save_model_folder, f"model_{epoch + version + 1}.pkl"))
             if args.model_name in ['JODIE', 'DyRep', 'TGN']:
-                torch.save(model[0].memory_bank.node_raw_messages, os.path.join(save_model_folder, f"nonparametric_{epoch + 1}.pkl"))
+                torch.save(model[0].memory_bank.node_raw_messages, os.path.join(save_model_folder, f"model_{version}_nonparametric_data.pkl"))
             
             # json.dump(train_losses, open(os.path.join(save_model_folder, f"train_losses_{epoch + 1}.json"), 'w'))
             
