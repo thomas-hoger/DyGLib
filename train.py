@@ -150,7 +150,7 @@ if __name__ == "__main__":
                 try :  
                     version = max(version, int(split[0][-1]))
                 except :
-                    version = 0
+                    version = max(version, 0)
         if version > 0:
             print(f"Version {version} found, loading previous save")
             model.load_state_dict(torch.load(save_model_folder + f"model_{version}.pkl", map_location='cpu'))
@@ -181,8 +181,9 @@ if __name__ == "__main__":
                     train_data.src_node_ids[train_data_indices], train_data.dst_node_ids[train_data_indices], \
                     train_data.node_interact_times[train_data_indices], train_data.edge_ids[train_data_indices], train_data.labels[train_data_indices]
 
-                _, batch_neg_dst_node_ids = train_neg_edge_sampler.sample(size=len(batch_src_node_ids))
-                batch_neg_src_node_ids = batch_src_node_ids
+                if not args.supervised and args.link_pred:
+                    _, batch_neg_dst_node_ids = train_neg_edge_sampler.sample(size=len(batch_src_node_ids))
+                    batch_neg_src_node_ids = batch_src_node_ids
 
                 # we need to compute for positive and negative edges respectively, because the new sampling strategy (for evaluation) allows the negative source nodes to be
                 # different from the source nodes, this is different from previous works that just replace destination nodes with negative destination nodes
