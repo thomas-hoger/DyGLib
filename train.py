@@ -293,7 +293,7 @@ if __name__ == "__main__":
             # Save model            
             torch.save(model.state_dict(), os.path.join(save_model_folder, f"model_{epoch + version + 1}.pkl"))
             if args.model_name in ['JODIE', 'DyRep', 'TGN']:
-                torch.save(model[0].memory_bank.node_raw_messages, os.path.join(save_model_folder, f"model_{version}_nonparametric_data.pkl"))
+                torch.save(model[0].memory_bank.node_raw_messages, os.path.join(save_model_folder, f"model_{epoch + version + 1}_nonparametric_data.pkl"))
             
             # json.dump(train_losses, open(os.path.join(save_model_folder, f"train_losses_{epoch + 1}.json"), 'w'))
             
