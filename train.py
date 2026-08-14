@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 import sys
 import os
@@ -144,12 +145,10 @@ if __name__ == "__main__":
         # Use saved backup if possible
         version = 0
         for filename in os.listdir(save_model_folder):
-            split = filename.split(".")
-            if split[1] == "pkl" : 
-                try :  
-                    version = max(version, int(split[0][-1]))
-                except :
-                    version = max(version, 0)
+            match = re.fullmatch(r"model_(\d+)\.pkl", filename)
+            if match:
+                version = max(version, int(match.group(1)))
+                    
         if version > 0:
             print(f"Version {version} found, loading previous save")
             model.load_state_dict(torch.load(save_model_folder + f"model_{version}.pkl", map_location='cpu'))
@@ -291,9 +290,9 @@ if __name__ == "__main__":
                     model[0].memory_bank.detach_memory_bank()
 
             # Save model            
-            torch.save(model.state_dict(), os.path.join(save_model_folder, f"model_{epoch + version + 1}.pkl"))
+            torch.save(model.state_dict(), os.path.join(save_model_folder, f"model_{epoch + 1}.pkl"))
             if args.model_name in ['JODIE', 'DyRep', 'TGN']:
-                torch.save(model[0].memory_bank.node_raw_messages, os.path.join(save_model_folder, f"model_{epoch + version + 1}_nonparametric_data.pkl"))
+                torch.save(model[0].memory_bank.node_raw_messages, os.path.join(save_model_folder, f"model_{epoch + 1}_nonparametric_data.pkl"))
             
             # json.dump(train_losses, open(os.path.join(save_model_folder, f"train_losses_{epoch + 1}.json"), 'w'))
             
